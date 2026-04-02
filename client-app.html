@@ -1,0 +1,1921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CoachCore Client App</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+#app-loader{position:fixed;inset:0;background:#0d0d12;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;}
+#app-loader .loader-logo{font-size:40px;margin-bottom:16px;}
+#app-loader .loader-text{font-family:'Outfit',sans-serif;font-size:14px;color:#a0a0b0;}
+#app-loader .loader-spin{width:32px;height:32px;border:3px solid rgba(255,255,255,0.1);border-top-color:#30d158;border-radius:50%;animation:spin 0.8s linear infinite;margin-top:20px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+<style>
+:root {
+  --bg: #0d0d12;
+  --bg2: #141419;
+  --bg3: #1c1c25;
+  --card: #1e1e28;
+  --card2: #25252f;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #f2f2f7;
+  --text2: #a0a0b0;
+  --muted: #606070;
+  --green: #30d158;
+  --green2: #0a8a35;
+  --blue: #0a84ff;
+  --blue2: #5ac8fa;
+  --orange: #ff9f0a;
+  --red: #ff453a;
+  --purple: #bf5af2;
+  --pink: #ff375f;
+  --teal: #32aea6;
+  --whoop: #1adb7a;
+  --mfp: #0070f3;
+  --garmin: #ff6030;
+  --apple: #ff2d55;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body {
+  font-family: 'Outfit', sans-serif;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* PHONE FRAME */
+.phone {
+  width: 393px;
+  min-height: 852px;
+  background: var(--bg);
+  border-radius: 52px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 40px 120px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.05);
+  flex-shrink: 0;
+}
+
+/* DYNAMIC ISLAND */
+.island {
+  width: 126px; height: 37px;
+  background: #000;
+  border-radius: 20px;
+  position: absolute;
+  top: 12px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+}
+
+/* STATUS BAR */
+.status-bar {
+  height: 59px;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 24px 10px;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 600;
+  position: relative;
+  z-index: 100;
+}
+
+.status-time { font-size: 16px; font-weight: 700; }
+.status-icons { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+
+/* TAB BAR */
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%; transform: translateX(-50%);
+  width: 393px;
+  height: 83px;
+  background: rgba(20,20,25,0.92);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  padding-top: 10px;
+  z-index: 999;
+  border-radius: 0 0 52px 52px;
+}
+
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding-top: 2px;
+}
+
+.tab-icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  transition: transform 0.15s;
+}
+
+.tab-item:active .tab-icon { transform: scale(0.88); }
+
+.tab-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  transition: color 0.15s;
+}
+
+.tab-item.active .tab-label { color: var(--green); }
+.tab-item.active .tab-icon { filter: brightness(1.2); }
+
+/* SCROLL AREA */
+.scroll-area {
+  height: calc(852px - 59px - 83px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 20px;
+}
+.scroll-area::-webkit-scrollbar { display: none; }
+
+/* VIEWS */
+.view { display: none; }
+.view.active { display: block; }
+
+/* ─── SECTION HELPERS ─── */
+.px { padding: 0 20px; }
+.section-gap { margin-bottom: 24px; }
+
+.section-title-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.section-title {
+  font-size: 20px; font-weight: 700; letter-spacing: -0.4px;
+}
+.section-link { font-size: 14px; color: var(--blue); font-weight: 500; cursor: pointer; }
+
+/* ─── GREETING ─── */
+.greeting-block {
+  padding: 16px 20px 20px;
+}
+.greeting-sub {
+  font-size: 13px; color: var(--text2); font-family: 'DM Mono', monospace;
+  margin-bottom: 6px;
+}
+.greeting-name { font-size: 26px; font-weight: 800; letter-spacing: -0.6px; }
+.greeting-date { font-size: 13px; color: var(--text2); margin-top: 2px; }
+
+.coach-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin-top: 12px;
+}
+.coach-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.coach-text { font-size: 12px; color: var(--text2); }
+.coach-text strong { color: var(--text); }
+
+/* ─── SCORE RING ─── */
+.score-ring-section {
+  padding: 0 20px;
+  margin-bottom: 20px;
+}
+
+.score-card {
+  background: var(--card);
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.ring-wrap { position: relative; width: 110px; height: 110px; flex-shrink: 0; }
+.ring-wrap svg { transform: rotate(-90deg); }
+.ring-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.ring-num { font-size: 28px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+.ring-label { font-size: 9px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+
+.score-info { flex: 1; }
+.score-tag {
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  display: inline-block;
+}
+.score-main { font-size: 18px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.3px; }
+.score-sub { font-size: 12px; color: var(--text2); line-height: 1.5; }
+
+/* ─── HORIZONTAL SCROLL ─── */
+.hscroll-wrap { padding-left: 20px; }
+.hscroll {
+  display: flex; gap: 10px;
+  overflow-x: auto; scrollbar-width: none; padding-right: 20px; padding-bottom: 4px;
+}
+.hscroll::-webkit-scrollbar { display: none; }
+
+/* ─── METRIC CARD ─── */
+.metric-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 16px;
+  min-width: 150px;
+  flex-shrink: 0;
+}
+
+.metric-card-icon { font-size: 22px; margin-bottom: 10px; }
+.metric-card-val { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; line-height: 1; margin-bottom: 4px; }
+.metric-card-unit { font-size: 12px; color: var(--text2); }
+.metric-card-label { font-size: 11px; color: var(--muted); margin-top: 8px; font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.5px; }
+.metric-card-source { font-size: 10px; color: var(--muted); margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+.src-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.metric-card-trend { font-size: 11px; margin-top: 6px; padding: 2px 6px; border-radius: 5px; display: inline-block; font-family: 'DM Mono', monospace; }
+.t-up { background: rgba(48,209,88,0.12); color: var(--green); }
+.t-down { background: rgba(255,69,58,0.12); color: var(--red); }
+.t-flat { background: rgba(96,96,112,0.2); color: var(--text2); }
+
+/* ─── SLEEP CARD ─── */
+.sleep-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 20px;
+  margin: 0 20px 20px;
+}
+
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+}
+.panel-title-row { display: flex; align-items: center; gap: 8px; }
+.panel-title { font-size: 15px; font-weight: 700; }
+.source-pill {
+  font-size: 10px; font-family: 'DM Mono', monospace;
+  padding: 2px 7px; border-radius: 10px; border: 1px solid;
+}
+
+.sleep-total { font-size: 34px; font-weight: 900; letter-spacing: -1px; color: var(--blue2); margin-bottom: 4px; }
+.sleep-qual { font-size: 13px; color: var(--text2); margin-bottom: 16px; }
+
+.sleep-bar-container {
+  height: 28px; background: var(--bg3); border-radius: 14px; overflow: hidden;
+  display: flex; margin-bottom: 12px;
+}
+.sleep-seg { height: 100%; transition: width 1s ease; }
+
+.sleep-legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+.legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+.sleep-stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+.sleep-stat { background: var(--bg3); border-radius: 12px; padding: 10px; text-align: center; }
+.sleep-stat-val { font-size: 16px; font-weight: 700; }
+.sleep-stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+/* ─── NUTRITION ─── */
+.cal-row-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 20px;
+  margin: 0 20px 12px;
+}
+
+.cal-donut-row { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.cal-donut-wrap { position: relative; width: 80px; height: 80px; flex-shrink: 0; }
+.cal-donut-wrap svg { transform: rotate(-90deg); }
+.cal-donut-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.cal-num { font-size: 17px; font-weight: 800; color: var(--purple); }
+.cal-sub-text { font-size: 9px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+.cal-breakdown { flex: 1; }
+.cal-item { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+.cal-item-val { font-family: 'DM Mono', monospace; font-weight: 500; }
+.cal-divider { height: 1px; background: var(--border); margin: 6px 0; }
+.cal-deficit { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; }
+
+.macro-section { display: flex; flex-direction: column; gap: 10px; }
+.macro-row { display: flex; align-items: center; gap: 10px; }
+.macro-label { font-size: 12px; font-weight: 600; width: 56px; }
+.macro-bar { flex: 1; height: 7px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+.macro-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+.macro-val { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text2); width: 64px; text-align: right; }
+
+.hydration-row {
+  display: flex; gap: 8px; margin: 0 20px 20px; flex-wrap: wrap;
+}
+.hydro-card {
+  flex: 1; min-width: 140px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 18px; padding: 14px;
+}
+.hydro-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.hydro-icon { font-size: 20px; }
+.hydro-title { font-size: 13px; font-weight: 600; }
+.hydro-val { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+.hydro-bar { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.hydro-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+.hydro-sub { font-size: 10px; color: var(--muted); margin-top: 5px; font-family: 'DM Mono', monospace; }
+
+/* ─── STEPS CARD ─── */
+.steps-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 24px; padding: 20px; margin: 0 20px 12px;
+}
+.steps-main-row { display: flex; align-items: flex-end; gap: 6px; margin-bottom: 4px; }
+.steps-big { font-size: 40px; font-weight: 900; color: var(--orange); letter-spacing: -2px; line-height: 1; }
+.steps-goal-text { font-size: 14px; color: var(--text2); margin-bottom: 8px; }
+.steps-prog { height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; margin-bottom: 16px; }
+.steps-prog-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #ff9f0a, #ff6030); transition: width 1s ease; }
+.steps-bars { display: flex; align-items: flex-end; gap: 5px; height: 48px; margin-bottom: 6px; }
+.s-bar { flex: 1; border-radius: 4px 4px 0 0; transition: height 1s ease; min-height: 4px; }
+.steps-days { display: flex; justify-content: space-between; }
+.steps-day { font-size: 9px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+.steps-stats { display: flex; gap: 8px; margin-top: 14px; }
+.steps-stat { flex: 1; background: var(--bg3); border-radius: 12px; padding: 10px; text-align: center; }
+.steps-stat-val { font-size: 16px; font-weight: 700; }
+.steps-stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+
+/* ─── HRV / HR ─── */
+.hrv-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 24px; padding: 20px; margin: 0 20px 12px;
+}
+.hrv-nums-row { display: flex; gap: 0; margin-bottom: 16px; }
+.hrv-num-block { flex: 1; padding-right: 14px; border-right: 1px solid var(--border); margin-right: 14px; }
+.hrv-num-block:last-child { border-right: none; margin-right: 0; padding-right: 0; }
+.hrv-big { font-size: 30px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+.hrv-unit { font-size: 13px; font-weight: 400; color: var(--text2); }
+.hrv-label { font-size: 10px; color: var(--muted); margin-top: 3px; font-family: 'DM Mono', monospace; }
+.hrv-chart { height: 60px; position: relative; margin-bottom: 8px; }
+.hrv-svg { width: 100%; height: 100%; }
+
+.hr-zones {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 14px;
+}
+.zone-row { display: flex; align-items: center; gap: 8px; }
+.zone-color { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.zone-name { font-size: 11px; color: var(--text2); width: 80px; }
+.zone-bar { flex: 1; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.zone-fill { height: 100%; border-radius: 3px; }
+.zone-time { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text2); width: 40px; text-align: right; }
+
+/* ─── WORKOUTS ─── */
+.workout-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 20px; padding: 14px 16px;
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 20px 8px;
+  cursor: pointer;
+}
+.workout-emoji-box {
+  width: 44px; height: 44px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0;
+}
+.workout-info { flex: 1; }
+.workout-name { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+.workout-meta { font-size: 11px; color: var(--text2); font-family: 'DM Mono', monospace; }
+.workout-chevron { color: var(--muted); font-size: 16px; }
+
+/* ─── ACTIVITY RINGS ─── */
+.rings-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 24px; padding: 20px; margin: 0 20px 12px;
+  display: flex; align-items: center; gap: 20px;
+}
+.rings-svg { width: 100px; height: 100px; flex-shrink: 0; }
+.rings-legend { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.ring-legend-item { display: flex; align-items: center; gap: 8px; }
+.ring-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.ring-legend-info { flex: 1; }
+.ring-legend-label { font-size: 11px; color: var(--text2); }
+.ring-legend-val { font-size: 13px; font-weight: 700; }
+
+/* ─── PROFILE / SETTINGS ─── */
+.profile-header {
+  padding: 20px;
+  display: flex; align-items: center; gap: 16px; margin-bottom: 20px;
+}
+.profile-avatar {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--green), var(--blue));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 800; color: #fff;
+}
+.profile-name { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+.profile-sub { font-size: 13px; color: var(--text2); margin-top: 2px; }
+
+.settings-section { padding: 0 20px; margin-bottom: 28px; }
+.settings-section-label {
+  font-size: 12px; font-family: 'DM Mono', monospace; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 8px; padding-left: 4px;
+}
+.settings-group {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 18px; overflow: hidden;
+}
+.settings-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-icon { font-size: 18px; width: 28px; text-align: center; flex-shrink: 0; }
+.settings-label { flex: 1; font-size: 15px; font-weight: 500; }
+.settings-value { font-size: 13px; color: var(--text2); font-family: 'DM Mono', monospace; }
+.settings-chevron { color: var(--muted); font-size: 14px; }
+.settings-toggle {
+  width: 44px; height: 26px; border-radius: 13px;
+  position: relative; cursor: pointer; transition: background 0.2s;
+}
+.settings-toggle.on { background: var(--green); }
+.settings-toggle.off { background: var(--bg3); }
+.toggle-knob {
+  width: 22px; height: 22px; background: #fff; border-radius: 50%;
+  position: absolute; top: 2px; transition: left 0.2s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+.settings-toggle.on .toggle-knob { left: 20px; }
+.settings-toggle.off .toggle-knob { left: 2px; }
+
+.connected-app-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.connected-app-row:last-child { border-bottom: none; }
+.app-logo { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.app-info { flex: 1; }
+.app-name { font-size: 14px; font-weight: 600; }
+.app-status { font-size: 11px; font-family: 'DM Mono', monospace; }
+
+/* ─── COACH MESSAGE ─── */
+.coach-msg {
+  background: linear-gradient(135deg, rgba(48,209,88,0.1), rgba(10,132,255,0.08));
+  border: 1px solid rgba(48,209,88,0.2);
+  border-radius: 20px;
+  padding: 16px;
+  margin: 0 20px 20px;
+}
+.coach-msg-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.coach-msg-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--green); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #000; }
+.coach-msg-name { font-size: 13px; font-weight: 700; }
+.coach-msg-time { font-size: 10px; color: var(--muted); margin-left: auto; font-family: 'DM Mono', monospace; }
+.coach-msg-text { font-size: 13px; color: var(--text2); line-height: 1.6; }
+.coach-msg-text strong { color: var(--text); }
+
+/* ─── INSIGHT CARD ─── */
+.insight-card {
+  border-radius: 20px; padding: 16px;
+  margin: 0 20px 10px;
+  border: 1px solid;
+}
+.insight-row { display: flex; gap: 10px; align-items: flex-start; }
+.insight-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.insight-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+.insight-text { font-size: 12px; line-height: 1.5; }
+
+/* ─── PREMIUM BADGE ─── */
+.premium-row {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 8px;
+}
+.premium-tag {
+  font-size: 9px; font-family: 'DM Mono', monospace;
+  padding: 2px 6px; border-radius: 5px;
+  background: linear-gradient(90deg, #ff9f0a, #ff453a);
+  color: #fff; font-weight: 700; letter-spacing: 0.5px;
+}
+.free-tag {
+  font-size: 9px; font-family: 'DM Mono', monospace;
+  padding: 2px 6px; border-radius: 5px;
+  background: rgba(48,209,88,0.15); color: var(--green);
+  border: 1px solid rgba(48,209,88,0.3);
+  font-weight: 600;
+}
+
+/* ─── PROGRESS / GOALS PAGE ─── */
+.goal-big-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 24px; padding: 20px; margin: 0 20px 12px;
+}
+.goal-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.goal-emoji { font-size: 22px; }
+.goal-name { font-size: 16px; font-weight: 700; }
+.goal-prog-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.goal-prog-bar { flex: 1; height: 10px; background: var(--bg3); border-radius: 5px; overflow: hidden; }
+.goal-prog-fill { height: 100%; border-radius: 5px; }
+.goal-pct { font-size: 14px; font-weight: 700; font-family: 'DM Mono', monospace; width: 38px; text-align: right; }
+.goal-stats { display: flex; gap: 8px; }
+.goal-stat { flex: 1; background: var(--bg3); border-radius: 12px; padding: 10px; text-align: center; }
+.goal-stat-val { font-size: 17px; font-weight: 800; letter-spacing: -0.5px; }
+.goal-stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+
+/* ANIMATION */
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(10px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.anim { animation: fadeUp 0.3s ease both; }
+.d1{animation-delay:.04s} .d2{animation-delay:.08s} .d3{animation-delay:.12s}
+.d4{animation-delay:.16s} .d5{animation-delay:.2s}  .d6{animation-delay:.24s}
+</style>
+</head>
+<body>
+
+<div id="app-loader">
+  <div class="loader-logo">🏋️</div>
+  <div class="loader-text">Loading your plan…</div>
+  <div class="loader-spin"></div>
+</div>
+
+<div class="phone">
+  <div class="island"></div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-time">9:41</div>
+    <div class="status-icons">
+      <span>●●●</span>
+      <span>WiFi</span>
+      <span>🔋</span>
+    </div>
+  </div>
+
+  <!-- SCROLL AREA -->
+  <div class="scroll-area" id="scroll-area">
+
+    <!-- ══════ HOME / TODAY ══════ -->
+    <div id="view-home" class="view active">
+
+      <div class="greeting-block anim d1">
+        <div class="greeting-sub" id="greeting-date">Tuesday, March 31</div>
+        <div class="greeting-name" id="greeting-name">Good morning, Sarah 👋</div>
+        <div class="coach-badge">
+          <div class="coach-dot"></div>
+          <div class="coach-text" id="coach-badge-text">Coach <strong>Rony Kawkab</strong> is watching your progress</div>
+        </div>
+      </div>
+
+      <!-- RECOVERY RING -->
+      <div class="score-ring-section anim d2">
+        <div class="score-card">
+          <div class="ring-wrap">
+            <svg viewBox="0 0 110 110" width="110" height="110">
+              <circle cx="55" cy="55" r="46" fill="none" stroke="#1c2020" stroke-width="10"/>
+              <circle cx="55" cy="55" r="46" fill="none" stroke="#1adb7a" stroke-width="10"
+                stroke-linecap="round" stroke-dasharray="289.0"
+                stroke-dashoffset="63.6" id="rec-ring-home"/>
+            </svg>
+            <div class="ring-center">
+              <div class="ring-num" style="color:#1adb7a">78</div>
+              <div class="ring-label">Recovery</div>
+            </div>
+          </div>
+          <div class="score-info">
+            <div class="source-pill" style="border-color:rgba(26,219,122,0.3);color:var(--whoop);background:rgba(26,219,122,0.08)">
+              WHOOP
+            </div>
+            <div class="score-main">Green — Ready</div>
+            <div class="score-sub">Your body is primed for training today. HRV is 12% above baseline.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COACH MESSAGE -->
+      <div class="coach-msg anim d2">
+        <div class="coach-msg-header">
+          <div class="coach-msg-avatar" id="coach-avatar">RK</div>
+          <div class="coach-msg-name" id="coach-msg-name">Coach Rony</div>
+          <div class="coach-msg-time">8:15 AM</div>
+        </div>
+        <div class="coach-msg-text" id="coach-msg-text">
+          Great work today! 💪 Hit <strong>1,900 kcal</strong> and aim for <strong>2.5L water</strong>. You're <strong>7.6kg down</strong> — keep going! 🎯
+        </div>
+      </div>
+
+      <!-- AI INSIGHTS -->
+      <div class="px section-title-row anim d3">
+        <div class="section-title">Today's Insights</div>
+      </div>
+
+      <div class="anim d3">
+        <div class="insight-card" style="background:rgba(26,219,122,0.06);border-color:rgba(26,219,122,0.2)">
+          <div class="insight-row">
+            <div class="insight-icon">💚</div>
+            <div>
+              <div class="premium-row"><span class="free-tag">FREE</span></div>
+              <div class="insight-title" style="color:var(--whoop)">Recovery at 78% — Green Zone</div>
+              <div class="insight-text" style="color:rgba(242,242,247,0.7)">HRV: 58ms · Resting HR: 54 bpm · SpO2: 97% · Resp: 15.2/min</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="insight-card" style="background:rgba(10,132,255,0.06);border-color:rgba(10,132,255,0.2)">
+          <div class="insight-row">
+            <div class="insight-icon">😴</div>
+            <div>
+              <div class="premium-row"><span class="free-tag">FREE</span></div>
+              <div class="insight-title" style="color:var(--blue2)">7h 12m sleep · 2 disturbances</div>
+              <div class="insight-text" style="color:rgba(242,242,247,0.7)">Deep: 1h18m · REM: 1h48m · Sleep efficiency: 91%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="insight-card" style="background:rgba(191,90,242,0.06);border-color:rgba(191,90,242,0.2)">
+          <div class="insight-row">
+            <div class="insight-icon">🥗</div>
+            <div>
+              <div class="premium-row"><span class="premium-tag">MFP PREMIUM</span></div>
+              <div class="insight-title" style="color:var(--purple)">Macro timing + micronutrients</div>
+              <div class="insight-text" style="color:rgba(242,242,247,0.7)">Iron 42% · Vit D 28% · Calcium 71% · Omega-3 low</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="insight-card" style="background:rgba(255,159,10,0.06);border-color:rgba(255,159,10,0.2)">
+          <div class="insight-row">
+            <div class="insight-icon">👟</div>
+            <div>
+              <div class="premium-row"><span class="free-tag">FREE</span></div>
+              <div class="insight-title" style="color:var(--orange)">8,240 steps · 82% of goal</div>
+              <div class="insight-text" style="color:rgba(242,242,247,0.7)">1,760 steps remaining to hit 10,000 today</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- QUICK METRICS -->
+      <div class="px section-title-row anim d4" style="margin-top:20px">
+        <div class="section-title">Quick Stats</div>
+        <div class="section-link">See all</div>
+      </div>
+
+      <div class="hscroll-wrap anim d4">
+        <div class="hscroll">
+          <div class="metric-card">
+            <div class="metric-card-icon">❤️</div>
+            <div class="metric-card-val" style="color:var(--red)">58</div>
+            <div class="metric-card-unit">ms HRV</div>
+            <div class="metric-card-trend t-up">↑ +12%</div>
+            <div class="metric-card-label">Heart Rate Var.</div>
+            <div class="metric-card-source"><div class="src-dot" style="background:var(--whoop)"></div>WHOOP</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-card-icon">🫀</div>
+            <div class="metric-card-val" style="color:var(--pink)">54</div>
+            <div class="metric-card-unit">bpm resting</div>
+            <div class="metric-card-trend t-down">↓ -2 vs avg</div>
+            <div class="metric-card-label">Resting HR</div>
+            <div class="metric-card-source"><div class="src-dot" style="background:var(--whoop)"></div>WHOOP</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-card-icon">🫁</div>
+            <div class="metric-card-val" style="color:var(--blue2)">97</div>
+            <div class="metric-card-unit">% SpO2</div>
+            <div class="metric-card-trend t-flat">→ Normal</div>
+            <div class="metric-card-label">Blood Oxygen</div>
+            <div class="metric-card-source"><div class="src-dot" style="background:var(--whoop)"></div>WHOOP</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-card-icon">🔥</div>
+            <div class="metric-card-val" style="color:var(--orange)">1,740</div>
+            <div class="metric-card-unit">kcal eaten</div>
+            <div class="metric-card-trend t-flat">→ On track</div>
+            <div class="metric-card-label">Calories</div>
+            <div class="metric-card-source"><div class="src-dot" style="background:var(--mfp)"></div>MFP</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-card-icon">⚡</div>
+            <div class="metric-card-val" style="color:var(--teal)">14.2</div>
+            <div class="metric-card-unit">strain</div>
+            <div class="metric-card-trend t-up">↑ High effort</div>
+            <div class="metric-card-label">WHOOP Strain</div>
+            <div class="metric-card-source"><div class="src-dot" style="background:var(--whoop)"></div>WHOOP</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-card-icon">🏃</div>
+            <div class="metric-card-val" style="color:var(--garmin)">44</div>
+            <div class="metric-card-unit">mL/kg/min</div>
+            <div class="metric-card-trend t-up">↑ Good</div>
+            <div class="metric-card-label">VO2 Max</div>
+            <div class="metric-card-source"><div class="src-dot" style="background:var(--garmin)"></div>Garmin</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:20px"></div>
+    </div>
+
+    <!-- ══════ HEALTH ══════ -->
+    <div id="view-health" class="view">
+
+      <div class="greeting-block">
+        <div class="section-title" style="font-size:24px;font-weight:800;letter-spacing:-0.5px">Health Data</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:4px">Synced from WHOOP, Garmin & Apple Watch</div>
+      </div>
+
+      <!-- SLEEP -->
+      <div class="sleep-panel anim d1">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <span style="font-size:18px">😴</span>
+            <div class="panel-title">Sleep Analysis</div>
+          </div>
+          <div class="source-pill" style="border-color:rgba(26,219,122,0.3);color:var(--whoop);background:rgba(26,219,122,0.08)">WHOOP · FREE</div>
+        </div>
+        <div class="sleep-total">7h 12m</div>
+        <div class="sleep-qual">Good sleep · 91% efficiency</div>
+        <div class="sleep-bar-container">
+          <div class="sleep-seg" style="width:5%;background:#3a3a4a"></div>
+          <div class="sleep-seg" style="width:50%;background:#2060c0"></div>
+          <div class="sleep-seg" style="width:25%;background:#4080ff"></div>
+          <div class="sleep-seg" style="width:20%;background:#0a3080"></div>
+        </div>
+        <div class="sleep-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#3a3a4a"></div>Awake</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#2060c0"></div>Light</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#4080ff"></div>REM</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#0a3080"></div>Deep</div>
+        </div>
+        <div class="sleep-stats-grid">
+          <div class="sleep-stat"><div class="sleep-stat-val" style="color:#0a3080">1h18</div><div class="sleep-stat-label">Deep</div></div>
+          <div class="sleep-stat"><div class="sleep-stat-val" style="color:#4080ff">1h48</div><div class="sleep-stat-label">REM</div></div>
+          <div class="sleep-stat"><div class="sleep-stat-val" style="color:var(--text2)">23m</div><div class="sleep-stat-label">Awake</div></div>
+          <div class="sleep-stat"><div class="sleep-stat-val" style="color:var(--whoop)">91%</div><div class="sleep-stat-label">Effic.</div></div>
+        </div>
+
+        <!-- PREMIUM SLEEP FEATURES -->
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+          <div class="premium-row" style="margin-bottom:10px">
+            <span class="premium-tag">WHOOP PREMIUM</span>
+            <span style="font-size:12px;color:var(--text2)">Advanced Sleep Metrics</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="background:var(--bg3);border-radius:12px;padding:10px">
+              <div style="font-size:15px;font-weight:700;color:#4080ff">15.2</div>
+              <div style="font-size:10px;color:var(--muted)">Resp. Rate/min</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:12px;padding:10px">
+              <div style="font-size:15px;font-weight:700;color:var(--orange)">+0.2°C</div>
+              <div style="font-size:10px;color:var(--muted)">Skin Temp</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:12px;padding:10px">
+              <div style="font-size:15px;font-weight:700;color:var(--whoop)">11:02 PM</div>
+              <div style="font-size:10px;color:var(--muted)">Bedtime</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:12px;padding:10px">
+              <div style="font-size:15px;font-weight:700;color:var(--blue2)">6:14 AM</div>
+              <div style="font-size:10px;color:var(--muted)">Wake time</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HRV & HEART RATE -->
+      <div class="hrv-card anim d2">
+        <div class="panel-header">
+          <div class="panel-title-row"><span style="font-size:18px">❤️</span><div class="panel-title">Heart Rate & HRV</div></div>
+          <div class="source-pill" style="border-color:rgba(255,45,85,0.3);color:var(--apple);background:rgba(255,45,85,0.08)">Apple · FREE</div>
+        </div>
+        <div class="hrv-nums-row">
+          <div class="hrv-num-block">
+            <div class="hrv-big" style="color:var(--red)">58<span class="hrv-unit">ms</span></div>
+            <div class="hrv-label">Current HRV</div>
+          </div>
+          <div class="hrv-num-block">
+            <div class="hrv-big" style="color:var(--muted)">52<span class="hrv-unit">ms</span></div>
+            <div class="hrv-label">30-day avg</div>
+          </div>
+          <div class="hrv-num-block" style="border:none;margin:0;padding:0">
+            <div class="hrv-big" style="color:var(--pink)">54<span class="hrv-unit">bpm</span></div>
+            <div class="hrv-label">Resting HR</div>
+          </div>
+        </div>
+        <div class="hrv-chart">
+          <svg class="hrv-svg" viewBox="0 0 350 60" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="hg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ff453a" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="#ff453a" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path d="M0,50 C30,45 60,35 100,38 C135,41 160,25 200,28 C235,31 265,15 300,18 C325,20 340,24 350,16 L350,60 L0,60Z" fill="url(#hg)"/>
+            <path d="M0,50 C30,45 60,35 100,38 C135,41 160,25 200,28 C235,31 265,15 300,18 C325,20 340,24 350,16" fill="none" stroke="#ff453a" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="350" cy="16" r="4" fill="#ff453a"/>
+            <line x1="0" y1="30" x2="350" y2="30" stroke="rgba(255,255,255,0.08)" stroke-width="1" stroke-dasharray="4 4"/>
+          </svg>
+        </div>
+
+        <!-- HR ZONES — GARMIN/APPLE PREMIUM -->
+        <div style="padding-top:14px;border-top:1px solid var(--border)">
+          <div class="premium-row" style="margin-bottom:10px">
+            <span class="premium-tag">GARMIN / APPLE PREMIUM</span>
+            <span style="font-size:12px;color:var(--text2)">HR Zones</span>
+          </div>
+          <div class="hr-zones">
+            <div class="zone-row"><div class="zone-color" style="background:#808080"></div><div class="zone-name">Zone 1 — Rest</div><div class="zone-bar"><div class="zone-fill" style="width:30%;background:#808080"></div></div><div class="zone-time">18 min</div></div>
+            <div class="zone-row"><div class="zone-color" style="background:#4080ff"></div><div class="zone-name">Zone 2 — Fat Burn</div><div class="zone-bar"><div class="zone-fill" style="width:55%;background:#4080ff"></div></div><div class="zone-time">34 min</div></div>
+            <div class="zone-row"><div class="zone-color" style="background:#30d158"></div><div class="zone-name">Zone 3 — Cardio</div><div class="zone-bar"><div class="zone-fill" style="width:40%;background:#30d158"></div></div><div class="zone-time">24 min</div></div>
+            <div class="zone-row"><div class="zone-color" style="background:#ff9f0a"></div><div class="zone-name">Zone 4 — Hard</div><div class="zone-bar"><div class="zone-fill" style="width:20%;background:#ff9f0a"></div></div><div class="zone-time">12 min</div></div>
+            <div class="zone-row"><div class="zone-color" style="background:#ff453a"></div><div class="zone-name">Zone 5 — Max</div><div class="zone-bar"><div class="zone-fill" style="width:5%;background:#ff453a"></div></div><div class="zone-time">3 min</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- APPLE ACTIVITY RINGS -->
+      <div class="rings-card anim d3">
+        <svg class="rings-svg" viewBox="0 0 100 100">
+          <!-- Move ring -->
+          <circle cx="50" cy="50" r="44" fill="none" stroke="#3a1020" stroke-width="8"/>
+          <circle cx="50" cy="50" r="44" fill="none" stroke="#ff2d55" stroke-width="8" stroke-linecap="round" stroke-dasharray="276.5" stroke-dashoffset="50" transform="rotate(-90 50 50)"/>
+          <!-- Exercise ring -->
+          <circle cx="50" cy="50" r="34" fill="none" stroke="#0a3010" stroke-width="8"/>
+          <circle cx="50" cy="50" r="34" fill="none" stroke="#30d158" stroke-width="8" stroke-linecap="round" stroke-dasharray="213.6" stroke-dashoffset="60" transform="rotate(-90 50 50)"/>
+          <!-- Stand ring -->
+          <circle cx="50" cy="50" r="24" fill="none" stroke="#003040" stroke-width="8"/>
+          <circle cx="50" cy="50" r="24" fill="none" stroke="#5ac8fa" stroke-width="8" stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="25" transform="rotate(-90 50 50)"/>
+        </svg>
+        <div class="rings-legend">
+          <div style="font-size:14px;font-weight:700;margin-bottom:4px">Activity Rings <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--apple);background:rgba(255,45,85,0.1);padding:2px 6px;border-radius:5px;margin-left:4px">Apple FREE</span></div>
+          <div class="ring-legend-item"><div class="ring-legend-dot" style="background:var(--pink)"></div><div class="ring-legend-info"><div class="ring-legend-label">Move</div><div class="ring-legend-val" style="color:var(--pink)">420 / 500 kcal</div></div></div>
+          <div class="ring-legend-item"><div class="ring-legend-dot" style="background:var(--green)"></div><div class="ring-legend-info"><div class="ring-legend-label">Exercise</div><div class="ring-legend-val" style="color:var(--green)">48 / 30 min ✓</div></div></div>
+          <div class="ring-legend-item"><div class="ring-legend-dot" style="background:var(--blue2)"></div><div class="ring-legend-info"><div class="ring-legend-label">Stand</div><div class="ring-legend-val" style="color:var(--blue2)">10 / 12 hrs</div></div></div>
+        </div>
+      </div>
+
+      <div style="height:20px"></div>
+    </div>
+
+    <!-- ══════ NUTRITION / FOOD LOG ══════ -->
+    <div id="view-nutrition" class="view">
+
+      <!-- DAILY SUMMARY BAR -->
+      <div style="padding:16px 20px 0">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px">
+          <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px">Food Diary</div>
+          <div style="font-size:12px;color:var(--text2);font-family:'DM Mono',monospace" id="nutrition-date">Tue, Mar 31</div>
+        </div>
+      </div>
+
+      <!-- CALORIE SUMMARY CARD -->
+      <div style="margin:12px 20px 0;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:16px" class="anim d1">
+        <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+          <div style="text-align:center">
+            <div style="font-size:22px;font-weight:800;color:var(--purple)" id="nl-goal">1,900</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">GOAL</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:18px">−</div>
+          <div style="text-align:center">
+            <div style="font-size:22px;font-weight:800;color:var(--red)" id="nl-food">1,740</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">FOOD</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:18px">+</div>
+          <div style="text-align:center">
+            <div style="font-size:22px;font-weight:800;color:var(--orange)" id="nl-exercise">420</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">EXERCISE</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:18px">=</div>
+          <div style="text-align:center">
+            <div style="font-size:22px;font-weight:800;color:var(--green)" id="nl-remaining">580</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">LEFT</div>
+          </div>
+        </div>
+        <!-- Macro pills -->
+        <div style="display:flex;gap:6px">
+          <div style="flex:1;background:rgba(255,69,58,0.1);border-radius:10px;padding:8px;text-align:center">
+            <div style="font-size:14px;font-weight:700;color:var(--red)">131g</div>
+            <div style="font-size:9px;color:var(--muted);margin-top:1px">Protein</div>
+            <div style="height:3px;background:rgba(255,69,58,0.2);border-radius:2px;margin-top:5px;overflow:hidden"><div style="height:100%;width:87%;background:var(--red);border-radius:2px"></div></div>
+          </div>
+          <div style="flex:1;background:rgba(255,159,10,0.1);border-radius:10px;padding:8px;text-align:center">
+            <div style="font-size:14px;font-weight:700;color:var(--orange)">180g</div>
+            <div style="font-size:9px;color:var(--muted);margin-top:1px">Carbs</div>
+            <div style="height:3px;background:rgba(255,159,10,0.2);border-radius:2px;margin-top:5px;overflow:hidden"><div style="height:100%;width:72%;background:var(--orange);border-radius:2px"></div></div>
+          </div>
+          <div style="flex:1;background:rgba(10,132,255,0.1);border-radius:10px;padding:8px;text-align:center">
+            <div style="font-size:14px;font-weight:700;color:var(--blue)">42g</div>
+            <div style="font-size:9px;color:var(--muted);margin-top:1px">Fat</div>
+            <div style="height:3px;background:rgba(10,132,255,0.2);border-radius:2px;margin-top:5px;overflow:hidden"><div style="height:100%;width:60%;background:var(--blue);border-radius:2px"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEARCH BAR -->
+      <div style="margin:14px 20px 0" class="anim d1">
+        <div style="background:var(--card);border:1px solid var(--border2);border-radius:14px;display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer" onclick="openFoodSearch()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#606070" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <div style="font-size:14px;color:var(--muted);flex:1">Search food or scan barcode…</div>
+          <div style="background:var(--bg3);border-radius:8px;padding:5px 8px;display:flex;align-items:center;gap:4px;cursor:pointer" onclick="event.stopPropagation();showBarcode()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><rect x="1" y="4" width="4" height="16"/><rect x="7" y="4" width="2" height="16"/><rect x="11" y="4" width="4" height="16"/><rect x="17" y="4" width="2" height="16"/><rect x="21" y="4" width="2" height="16"/></svg>
+            <span style="font-size:11px;color:var(--blue);font-weight:600">Scan</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEARCH PANEL (hidden by default) -->
+      <div id="food-search-panel" style="display:none;margin:10px 20px 0;background:var(--card);border:1px solid var(--border2);border-radius:16px;overflow:hidden">
+        <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input id="food-search-input" type="text" placeholder="e.g. Greek yogurt, banana, chicken…"
+            style="flex:1;background:transparent;border:none;outline:none;font-size:14px;color:var(--text);font-family:'Outfit',sans-serif"
+            oninput="searchFood(this.value)">
+          <span style="font-size:18px;cursor:pointer;color:var(--muted)" onclick="closeFoodSearch()">✕</span>
+        </div>
+        <!-- Quick add buttons -->
+        <div style="padding:10px 14px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+          <span style="font-size:11px;color:var(--muted)">Recent:</span>
+          <span class="quick-food-tag" onclick="quickAdd('Greek Yogurt 0% Fat',100,17,6,0)">Greek Yogurt</span>
+          <span class="quick-food-tag" onclick="quickAdd('Banana',89,23,1,0)">Banana</span>
+          <span class="quick-food-tag" onclick="quickAdd('Chicken Breast',165,0,31,4)">Chicken</span>
+          <span class="quick-food-tag" onclick="quickAdd('Brown Rice (100g)',130,28,3,1)">Brown Rice</span>
+          <span class="quick-food-tag" onclick="quickAdd('Olive Oil (1 tbsp)',119,0,0,14)">Olive Oil</span>
+        </div>
+        <div id="search-results" style="max-height:200px;overflow-y:auto">
+          <div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">
+            Start typing to search 2.8M+ foods…<br>
+            <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--border2)">Powered by USDA FoodData Central + Open Food Facts</span>
+          </div>
+        </div>
+        <!-- Meal selector -->
+        <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:6px;align-items:center">
+          <span style="font-size:11px;color:var(--muted)">Add to:</span>
+          <select id="meal-selector" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--text);outline:none;font-family:'Outfit',sans-serif">
+            <option>Breakfast</option>
+            <option>Lunch</option>
+            <option selected>Dinner</option>
+            <option>Snacks</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- MEAL SECTIONS -->
+      <div id="meal-sections" style="margin-top:14px">
+
+        <!-- BREAKFAST -->
+        <div style="margin:0 20px 10px" class="anim d2">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:14px;font-weight:700">🌅 Breakfast</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)" id="breakfast-cal">428 kcal</div>
+              <div style="font-size:18px;color:var(--green);cursor:pointer;line-height:1" onclick="addToMeal('Breakfast')">+</div>
+            </div>
+          </div>
+          <div id="breakfast-items" style="background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+            <div class="food-log-item">
+              <div class="food-log-info">
+                <div class="food-log-name">Greek Yogurt 0% Fat</div>
+                <div class="food-log-meta">200g · 100 kcal · P 17g · C 6g · F 0g</div>
+              </div>
+              <div class="food-log-kcal" style="color:var(--text2)">100</div>
+              <div class="food-log-del" onclick="removeFood(this)">✕</div>
+            </div>
+            <div class="food-log-item">
+              <div class="food-log-info">
+                <div class="food-log-name">Banana (medium)</div>
+                <div class="food-log-meta">118g · 89 kcal · P 1g · C 23g · F 0g</div>
+              </div>
+              <div class="food-log-kcal" style="color:var(--text2)">89</div>
+              <div class="food-log-del" onclick="removeFood(this)">✕</div>
+            </div>
+            <div class="food-log-item" style="border:none">
+              <div class="food-log-info">
+                <div class="food-log-name">Oats, dry (rolled)</div>
+                <div class="food-log-meta">80g · 239 kcal · P 8g · C 41g · F 5g</div>
+              </div>
+              <div class="food-log-kcal" style="color:var(--text2)">239</div>
+              <div class="food-log-del" onclick="removeFood(this)">✕</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LUNCH -->
+        <div style="margin:0 20px 10px" class="anim d3">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:14px;font-weight:700">☀️ Lunch</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)" id="lunch-cal">610 kcal</div>
+              <div style="font-size:18px;color:var(--green);cursor:pointer;line-height:1" onclick="addToMeal('Lunch')">+</div>
+            </div>
+          </div>
+          <div id="lunch-items" style="background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+            <div class="food-log-item">
+              <div class="food-log-info">
+                <div class="food-log-name">Chicken Breast, grilled</div>
+                <div class="food-log-meta">200g · 330 kcal · P 62g · C 0g · F 7g</div>
+              </div>
+              <div class="food-log-kcal" style="color:var(--text2)">330</div>
+              <div class="food-log-del" onclick="removeFood(this)">✕</div>
+            </div>
+            <div class="food-log-item">
+              <div class="food-log-info">
+                <div class="food-log-name">Brown Rice, cooked</div>
+                <div class="food-log-meta">150g · 195 kcal · P 4g · C 41g · F 2g</div>
+              </div>
+              <div class="food-log-kcal" style="color:var(--text2)">195</div>
+              <div class="food-log-del" onclick="removeFood(this)">✕</div>
+            </div>
+            <div class="food-log-item" style="border:none">
+              <div class="food-log-info">
+                <div class="food-log-name">Olive Oil (1 tbsp)</div>
+                <div class="food-log-meta">14g · 119 kcal · P 0g · C 0g · F 14g</div>
+              </div>
+              <div class="food-log-kcal" style="color:var(--text2)">119</div>
+              <div class="food-log-del" onclick="removeFood(this)">✕</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DINNER -->
+        <div style="margin:0 20px 10px" class="anim d4">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:14px;font-weight:700">🌙 Dinner</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)" id="dinner-cal">542 kcal</div>
+              <div style="font-size:18px;color:var(--green);cursor:pointer;line-height:1" onclick="addToMeal('Dinner')">+</div>
+            </div>
+          </div>
+          <div id="dinner-items" style="background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+            <div class="food-log-item">
+              <div class="food-log-info">
+                <div class="food-log-name">Salmon, Atlantic (baked)</div>
+                <div class="food-log-meta">180g · 367 kcal · P 40g · C 0g · F 22g</div>
+              </div>
+              <div class="food-log-kcal" style="color:var(--text2)">367</div>
+              <div class="food-log-del" onclick="removeFood(this)">✕</div>
+            </div>
+            <div class="food-log-item" style="border:none">
+              <div class="food-log-info">
+                <div class="food-log-name">Mixed Vegetables, roasted</div>
+                <div class="food-log-meta">200g · 175 kcal · P 5g · C 22g · F 7g</div>
+              </div>
+              <div class="food-log-kcal" style="color:var(--text2)">175</div>
+              <div class="food-log-del" onclick="removeFood(this)">✕</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SNACKS -->
+        <div style="margin:0 20px 10px" class="anim d5">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:14px;font-weight:700">🍎 Snacks</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)" id="snacks-cal">160 kcal</div>
+              <div style="font-size:18px;color:var(--green);cursor:pointer;line-height:1" onclick="addToMeal('Snacks')">+</div>
+            </div>
+          </div>
+          <div id="snacks-items" style="background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+            <div class="food-log-item" style="border:none">
+              <div class="food-log-info">
+                <div class="food-log-name">Almonds (1 oz / 28g)</div>
+                <div class="food-log-meta">28g · 164 kcal · P 6g · C 6g · F 14g</div>
+              </div>
+              <div class="food-log-kcal" style="color:var(--text2)">164</div>
+              <div class="food-log-del" onclick="removeFood(this)">✕</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- WATER -->
+        <div style="margin:0 20px 10px" class="anim d5">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:14px;font-weight:700">💧 Water</div>
+            <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--blue2)" id="water-display">1.8L / 2.5L</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px">
+            <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap" id="water-glasses-row">
+              <div class="glass-btn filled" onclick="toggleGlass(this)">💧</div>
+              <div class="glass-btn filled" onclick="toggleGlass(this)">💧</div>
+              <div class="glass-btn filled" onclick="toggleGlass(this)">💧</div>
+              <div class="glass-btn filled" onclick="toggleGlass(this)">💧</div>
+              <div class="glass-btn filled" onclick="toggleGlass(this)">💧</div>
+              <div class="glass-btn" onclick="toggleGlass(this)">○</div>
+              <div class="glass-btn" onclick="toggleGlass(this)">○</div>
+              <div class="glass-btn" onclick="toggleGlass(this)">○</div>
+            </div>
+            <div style="height:7px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-bottom:6px">
+              <div style="height:100%;width:72%;background:linear-gradient(90deg,#5ac8fa,#0a84ff);border-radius:4px" id="water-prog-bar"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">
+              <span>5 / 8 glasses (250ml each)</span>
+              <span style="color:var(--blue2)">0.7L remaining</span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button onclick="addWater(250)" style="flex:1;background:rgba(90,200,250,0.1);border:1px solid rgba(90,200,250,0.2);border-radius:9px;padding:8px;font-size:12px;color:var(--blue2);cursor:pointer;font-family:'Outfit',sans-serif">+250ml</button>
+              <button onclick="addWater(500)" style="flex:1;background:rgba(90,200,250,0.1);border:1px solid rgba(90,200,250,0.2);border-radius:9px;padding:8px;font-size:12px;color:var(--blue2);cursor:pointer;font-family:'Outfit',sans-serif">+500ml</button>
+              <button onclick="addWater(1000)" style="flex:1;background:rgba(90,200,250,0.1);border:1px solid rgba(90,200,250,0.2);border-radius:9px;padding:8px;font-size:12px;color:var(--blue2);cursor:pointer;font-family:'Outfit',sans-serif">+1L</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- MICRONUTRIENTS (Premium) -->
+      <div style="margin:0 20px 10px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px" class="anim d6">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-size:14px;font-weight:700">🔬 Micronutrients</div>
+          <span style="font-size:9px;background:linear-gradient(90deg,#ff9f0a,#ff453a);color:#fff;padding:2px 7px;border-radius:5px;font-family:'DM Mono',monospace;font-weight:700">PREMIUM</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="macro-row"><div class="macro-label" style="color:var(--red);font-size:11px">Iron</div><div class="macro-bar"><div class="macro-fill" style="width:42%;background:var(--red)"></div></div><div class="macro-val">8 / 18mg</div></div>
+          <div class="macro-row"><div class="macro-label" style="color:var(--orange);font-size:11px">Vit D</div><div class="macro-bar"><div class="macro-fill" style="width:28%;background:var(--orange)"></div></div><div class="macro-val">560 IU</div></div>
+          <div class="macro-row"><div class="macro-label" style="color:var(--blue2);font-size:11px">Calcium</div><div class="macro-bar"><div class="macro-fill" style="width:71%;background:var(--blue2)"></div></div><div class="macro-val">710mg</div></div>
+          <div class="macro-row"><div class="macro-label" style="color:var(--teal);font-size:11px">Magnesium</div><div class="macro-bar"><div class="macro-fill" style="width:48%;background:var(--teal)"></div></div><div class="macro-val">192mg</div></div>
+          <div class="macro-row"><div class="macro-label" style="color:var(--orange);font-size:11px">Fiber</div><div class="macro-bar"><div class="macro-fill" style="width:79%;background:var(--orange)"></div></div><div class="macro-val">22 / 28g</div></div>
+        </div>
+        <div style="margin-top:10px;background:rgba(191,90,242,0.06);border:1px solid rgba(191,90,242,0.2);border-radius:10px;padding:10px;font-size:12px;color:var(--text2)">
+          ⚠️ <strong style="color:var(--text)">Iron and Vitamin D</strong> are below target — your coach has been notified.
+        </div>
+      </div>
+
+      <!-- BARCODE MODAL -->
+      <div id="barcode-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:800;align-items:center;justify-content:center">
+        <div style="background:var(--card);border-radius:24px;padding:28px;width:320px;text-align:center">
+          <div style="font-size:24px;margin-bottom:8px">📷</div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:6px">Scan Barcode</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:20px">Point your camera at a product barcode. We'll look it up in our database of 2.8M+ products.</div>
+          <!-- Simulated viewfinder -->
+          <div style="width:220px;height:140px;border:2px solid var(--green);border-radius:12px;margin:0 auto 16px;background:var(--bg3);display:flex;align-items:center;justify-content:center;position:relative">
+            <div style="position:absolute;top:8px;left:8px;width:20px;height:20px;border-top:3px solid var(--green);border-left:3px solid var(--green);border-radius:2px 0 0 0"></div>
+            <div style="position:absolute;top:8px;right:8px;width:20px;height:20px;border-top:3px solid var(--green);border-right:3px solid var(--green);border-radius:0 2px 0 0"></div>
+            <div style="position:absolute;bottom:8px;left:8px;width:20px;height:20px;border-bottom:3px solid var(--green);border-left:3px solid var(--green);border-radius:0 0 0 2px"></div>
+            <div style="position:absolute;bottom:8px;right:8px;width:20px;height:20px;border-bottom:3px solid var(--green);border-right:3px solid var(--green);border-radius:0 0 2px 0"></div>
+            <div style="font-size:11px;color:var(--muted)">Camera feed here</div>
+          </div>
+          <button onclick="simulateScan()" style="width:100%;background:var(--green);border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:#000;cursor:pointer;font-family:'Outfit',sans-serif;margin-bottom:10px">Simulate Scan</button>
+          <button onclick="closeBarcode()" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:11px;font-size:14px;color:var(--text2);cursor:pointer;font-family:'Outfit',sans-serif">Cancel</button>
+        </div>
+      </div>
+
+      <!-- FOOD DETAIL MODAL -->
+      <div id="food-detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:810;align-items:flex-end;justify-content:center">
+        <div style="background:var(--card);border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:393px">
+          <div style="width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 20px"></div>
+          <div style="font-size:18px;font-weight:800;margin-bottom:4px" id="fd-name">Food Item</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:18px;font-family:'DM Mono',monospace" id="fd-brand">Brand / Source</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px">
+            <div style="background:var(--bg3);border-radius:12px;padding:10px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--purple)" id="fd-cal">165</div><div style="font-size:9px;color:var(--muted)">kcal</div></div>
+            <div style="background:var(--bg3);border-radius:12px;padding:10px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--red)" id="fd-prot">31</div><div style="font-size:9px;color:var(--muted)">g protein</div></div>
+            <div style="background:var(--bg3);border-radius:12px;padding:10px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--orange)" id="fd-carb">0</div><div style="font-size:9px;color:var(--muted)">g carbs</div></div>
+            <div style="background:var(--bg3);border-radius:12px;padding:10px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--blue)" id="fd-fat">4</div><div style="font-size:9px;color:var(--muted)">g fat</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+            <div style="font-size:13px;color:var(--text2)">Serving size:</div>
+            <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border-radius:10px;padding:6px 12px">
+              <span style="cursor:pointer;font-size:18px;color:var(--text2)" onclick="changeServing(-1)">−</span>
+              <span style="font-size:14px;font-weight:700;min-width:30px;text-align:center" id="fd-serving">100</span>
+              <span style="font-size:13px;color:var(--muted)">g</span>
+              <span style="cursor:pointer;font-size:18px;color:var(--green)" onclick="changeServing(1)">+</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="confirmAddFood()" style="flex:1;background:var(--green);border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;color:#000;cursor:pointer;font-family:'Outfit',sans-serif">Add to Diary</button>
+            <button onclick="closeFoodDetail()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:14px 18px;font-size:15px;color:var(--text2);cursor:pointer;font-family:'Outfit',sans-serif">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:20px"></div>
+    </div>
+
+    <!-- ══════ ACTIVITY ══════ -->
+    <div id="view-activity" class="view">
+
+      <div class="greeting-block">
+        <div class="section-title" style="font-size:24px;font-weight:800;letter-spacing:-0.5px">Activity</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:4px">Garmin · Apple Watch · WHOOP</div>
+      </div>
+
+      <!-- STEPS CARD -->
+      <div class="steps-card anim d1">
+        <div class="panel-header">
+          <div class="panel-title-row"><span style="font-size:18px">👟</span><div class="panel-title">Steps</div></div>
+          <div class="source-pill" style="border-color:rgba(255,159,10,0.3);color:var(--orange);background:rgba(255,159,10,0.08)">Garmin · FREE</div>
+        </div>
+        <div class="steps-main-row">
+          <div class="steps-big">8,240</div>
+        </div>
+        <div class="steps-goal-text">of 10,000 daily goal · 1,760 remaining</div>
+        <div class="steps-prog"><div class="steps-prog-fill" style="width:82%"></div></div>
+        <div class="steps-bars">
+          <div class="s-bar" style="height:70%;background:var(--orange);opacity:0.5"></div>
+          <div class="s-bar" style="height:95%;background:var(--orange);opacity:0.5"></div>
+          <div class="s-bar" style="height:60%;background:var(--orange);opacity:0.5"></div>
+          <div class="s-bar" style="height:50%;background:#444;opacity:0.5"></div>
+          <div class="s-bar" style="height:82%;background:var(--orange);outline:2px solid var(--orange);outline-offset:1px"></div>
+          <div class="s-bar" style="height:4px;background:#333"></div>
+          <div class="s-bar" style="height:4px;background:#333"></div>
+        </div>
+        <div class="steps-days">
+          <span class="steps-day">Mon</span><span class="steps-day">Tue</span><span class="steps-day">Wed</span><span class="steps-day">Thu</span><span class="steps-day" style="color:var(--orange)">Fri</span><span class="steps-day">Sat</span><span class="steps-day">Sun</span>
+        </div>
+        <div class="steps-stats">
+          <div class="steps-stat"><div class="steps-stat-val" style="color:var(--orange)">5.8</div><div class="steps-stat-label">km walked</div></div>
+          <div class="steps-stat"><div class="steps-stat-val" style="color:var(--red)">312</div><div class="steps-stat-label">kcal steps</div></div>
+          <div class="steps-stat"><div class="steps-stat-val" style="color:var(--green)">35</div><div class="steps-stat-label">active min</div></div>
+        </div>
+      </div>
+
+      <!-- WORKOUTS -->
+      <div class="px section-title-row anim d2">
+        <div class="section-title">Recent Workouts</div>
+        <div class="section-link">All</div>
+      </div>
+
+      <div class="anim d2">
+        <div class="workout-card">
+          <div class="workout-emoji-box" style="background:rgba(255,69,58,0.1)">🏃</div>
+          <div class="workout-info">
+            <div class="workout-name">Zone 2 Run</div>
+            <div class="workout-meta">5.2km · 34min · 142bpm · 312kcal</div>
+            <div class="metric-card-source" style="margin-top:4px"><div class="src-dot" style="background:var(--garmin)"></div><span style="font-size:10px;color:var(--muted)">Garmin · Today</span></div>
+          </div>
+          <div class="workout-chevron">›</div>
+        </div>
+        <div class="workout-card">
+          <div class="workout-emoji-box" style="background:rgba(191,90,242,0.1)">🏋️</div>
+          <div class="workout-info">
+            <div class="workout-name">Full Body Strength</div>
+            <div class="workout-meta">50min · 138bpm · 285kcal</div>
+            <div class="metric-card-source" style="margin-top:4px"><div class="src-dot" style="background:var(--apple)"></div><span style="font-size:10px;color:var(--muted)">Apple Watch · Yesterday</span></div>
+          </div>
+          <div class="workout-chevron">›</div>
+        </div>
+        <div class="workout-card">
+          <div class="workout-emoji-box" style="background:rgba(90,200,250,0.1)">🚴</div>
+          <div class="workout-info">
+            <div class="workout-name">Outdoor Cycling</div>
+            <div class="workout-meta">18km · 55min · 155bpm · 480kcal</div>
+            <div class="metric-card-source" style="margin-top:4px"><div class="src-dot" style="background:var(--garmin)"></div><span style="font-size:10px;color:var(--muted)">Garmin · 2 days ago</span></div>
+          </div>
+          <div class="workout-chevron">›</div>
+        </div>
+      </div>
+
+      <!-- WHOOP STRAIN — PREMIUM -->
+      <div class="steps-card anim d3" style="margin-top:8px">
+        <div class="panel-header">
+          <div class="panel-title-row"><span style="font-size:18px">⚡</span><div class="panel-title">WHOOP Strain</div></div>
+          <div class="source-pill" style="border-color:rgba(26,219,122,0.3);color:var(--whoop);background:rgba(26,219,122,0.08)">WHOOP · ALL PLANS</div>
+        </div>
+        <div style="display:flex;gap:16px;align-items:center">
+          <div>
+            <div style="font-size:48px;font-weight:900;color:var(--teal);letter-spacing:-2px;line-height:1">14.2</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:4px">Today's strain</div>
+            <div style="font-size:11px;color:var(--teal);font-family:'DM Mono',monospace;margin-top:2px">Strenuous (13–18)</div>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px">7-day strain</div>
+            <div style="display:flex;align-items:flex-end;gap:4px;height:44px">
+              <div style="flex:1;height:65%;background:var(--teal);border-radius:3px;opacity:0.5"></div>
+              <div style="flex:1;height:45%;background:var(--teal);border-radius:3px;opacity:0.5"></div>
+              <div style="flex:1;height:80%;background:var(--teal);border-radius:3px;opacity:0.5"></div>
+              <div style="flex:1;height:30%;background:#444;border-radius:3px;opacity:0.5"></div>
+              <div style="flex:1;height:68%;background:var(--teal);border-radius:3px;outline:2px solid var(--teal);outline-offset:1px"></div>
+              <div style="flex:1;height:4px;background:#333;border-radius:3px"></div>
+              <div style="flex:1;height:4px;background:#333;border-radius:3px"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Body Battery — GARMIN PREMIUM -->
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+          <div class="premium-row" style="margin-bottom:8px">
+            <span class="premium-tag">GARMIN PREMIUM</span>
+            <span style="font-size:12px;color:var(--text2)">Body Battery™</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-size:36px;font-weight:900;color:var(--orange);letter-spacing:-1px">68</div>
+            <div style="flex:1">
+              <div style="height:10px;background:var(--bg3);border-radius:5px;overflow:hidden">
+                <div style="height:100%;width:68%;background:linear-gradient(90deg,#ff9f0a,#30d158);border-radius:5px"></div>
+              </div>
+              <div style="font-size:11px;color:var(--text2);margin-top:5px">Moderate energy · Charged 84 · Drained to 68</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:20px"></div>
+    </div>
+
+    <!-- ══════ PROFILE ══════ -->
+    <div id="view-profile" class="view">
+
+      <!-- PROFILE HEADER WITH PHOTO UPLOAD -->
+      <div style="padding:24px 20px 0;display:flex;flex-direction:column;align-items:center;margin-bottom:20px" class="anim d1">
+        <!-- Avatar with upload -->
+        <div style="position:relative;margin-bottom:14px">
+          <div id="profile-avatar-wrap" style="width:90px;height:90px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,var(--green),var(--blue));display:flex;align-items:center;justify-content:center;cursor:pointer;border:3px solid var(--border2)" onclick="document.getElementById('photo-input').click()">
+            <img id="profile-photo" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none">
+            <div id="profile-initials" style="font-size:30px;font-weight:800;color:#fff">SM</div>
+          </div>
+          <!-- Camera badge -->
+          <div onclick="document.getElementById('photo-input').click()" style="position:absolute;bottom:2px;right:2px;width:28px;height:28px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid var(--bg);font-size:14px">📷</div>
+          <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="handlePhotoUpload(this)">
+        </div>
+        <div id="profile-name" style="font-size:22px;font-weight:800;letter-spacing:-0.5px">Sarah Mitchell</div>
+        <div id="profile-meta" style="font-size:13px;color:var(--text2);margin-top:3px">Goal: Lose 10kg · 28 · Female</div>
+        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
+          <span id="profile-badge-weight" style="font-size:11px;background:rgba(26,219,122,0.1);border:1px solid rgba(26,219,122,0.3);color:var(--whoop);padding:3px 8px;border-radius:10px;font-family:'DM Mono',monospace">−7.6kg so far ↓</span>
+          <span id="profile-badge-week" style="font-size:11px;background:rgba(10,132,255,0.1);border:1px solid rgba(10,132,255,0.2);color:var(--blue);padding:3px 8px;border-radius:10px;font-family:'DM Mono',monospace">Week 14 🔥</span>
+        </div>
+        <!-- Tap to change hint -->
+        <div id="photo-hint" style="font-size:11px;color:var(--muted);margin-top:8px;font-family:'DM Mono',monospace">Tap photo to change</div>
+      </div>
+
+      <!-- CONNECTED APPS -->
+      <div class="settings-section anim d2">
+        <div class="settings-section-label">Connected Apps & Devices</div>
+        <div class="settings-group">
+          <div class="connected-app-row">
+            <div class="app-logo" style="background:rgba(26,219,122,0.12)">🟢</div>
+            <div class="app-info">
+              <div class="app-name">WHOOP 4.0</div>
+              <div class="app-status" style="color:var(--whoop)">● Connected · Synced 3m ago</div>
+            </div>
+            <div style="font-size:11px;color:var(--muted)">All plans</div>
+          </div>
+          <div class="connected-app-row">
+            <div class="app-logo" style="background:rgba(0,112,243,0.12)">🔵</div>
+            <div class="app-info">
+              <div class="app-name">MyFitnessPal Premium</div>
+              <div class="app-status" style="color:var(--mfp)">● Connected · Synced 8m ago</div>
+            </div>
+            <div style="font-size:11px;color:var(--purple)">Premium</div>
+          </div>
+          <div class="connected-app-row">
+            <div class="app-logo" style="background:rgba(255,96,48,0.12)">🟠</div>
+            <div class="app-info">
+              <div class="app-name">Garmin Forerunner 265</div>
+              <div class="app-status" style="color:var(--garmin)">● Connected · Synced 2m ago</div>
+            </div>
+            <div style="font-size:11px;color:var(--muted)">Business</div>
+          </div>
+          <div class="connected-app-row">
+            <div class="app-logo" style="background:rgba(255,45,85,0.12)">🍎</div>
+            <div class="app-info">
+              <div class="app-name">Apple Watch Series 9</div>
+              <div class="app-status" style="color:var(--apple)">● Connected · Synced 1m ago</div>
+            </div>
+            <div style="font-size:11px;color:var(--muted)">HealthKit</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GOALS -->
+      <div class="settings-section anim d3">
+        <div class="settings-section-label">My Goals</div>
+        <div class="settings-group">
+          <div class="settings-row"><div class="settings-icon">⚖️</div><div class="settings-label">Target Weight</div><div id="goal-weight" class="settings-value">65 kg</div><div class="settings-chevron">›</div></div>
+          <div class="settings-row"><div class="settings-icon">🔥</div><div class="settings-label">Daily Calories</div><div id="goal-calories" class="settings-value">1,900 kcal</div><div class="settings-chevron">›</div></div>
+          <div class="settings-row"><div class="settings-icon">💧</div><div class="settings-label">Daily Water</div><div id="goal-water" class="settings-value">2.5 L</div><div class="settings-chevron">›</div></div>
+          <div class="settings-row"><div class="settings-icon">👟</div><div class="settings-label">Daily Steps</div><div id="goal-steps" class="settings-value">10,000</div><div class="settings-chevron">›</div></div>
+          <div class="settings-row"><div class="settings-icon">😴</div><div class="settings-label">Sleep Target</div><div id="goal-sleep" class="settings-value">8h 00m</div><div class="settings-chevron">›</div></div>
+        </div>
+      </div>
+
+      <!-- NOTIFICATIONS -->
+      <div class="settings-section anim d4">
+        <div class="settings-section-label">Notifications from Coach</div>
+        <div class="settings-group">
+          <div class="settings-row">
+            <div class="settings-icon">📊</div>
+            <div class="settings-label">Daily Check-in</div>
+            <div class="settings-toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"><div class="toggle-knob"></div></div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-icon">⚠️</div>
+            <div class="settings-label">Recovery Alerts</div>
+            <div class="settings-toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"><div class="toggle-knob"></div></div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-icon">💬</div>
+            <div class="settings-label">Coach Messages</div>
+            <div class="settings-toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"><div class="toggle-knob"></div></div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-icon">🥗</div>
+            <div class="settings-label">Nutrition Reminders</div>
+            <div class="settings-toggle off" onclick="this.classList.toggle('on');this.classList.toggle('off')"><div class="toggle-knob"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:20px"></div>
+    </div>
+
+  </div><!-- end scroll-area -->
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <div class="tab-item active" onclick="switchTab('home', this)">
+      <div class="tab-icon">🏠</div>
+      <div class="tab-label">Today</div>
+    </div>
+    <div class="tab-item" onclick="switchTab('health', this)">
+      <div class="tab-icon">❤️</div>
+      <div class="tab-label">Health</div>
+    </div>
+    <div class="tab-item" onclick="switchTab('nutrition', this)">
+      <div class="tab-icon">🥗</div>
+      <div class="tab-label">Nutrition</div>
+    </div>
+    <div class="tab-item" onclick="switchTab('activity', this)">
+      <div class="tab-icon">⚡</div>
+      <div class="tab-label">Activity</div>
+    </div>
+    <div class="tab-item" onclick="switchTab('profile', this)">
+      <div class="tab-icon">👤</div>
+      <div class="tab-label">Profile</div>
+    </div>
+  </div>
+
+</div><!-- end phone -->
+
+<style>
+.food-log-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.food-log-info { flex: 1; min-width: 0; }
+.food-log-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.food-log-meta { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
+.food-log-kcal { font-size: 13px; font-weight: 700; font-family: 'DM Mono', monospace; min-width: 32px; text-align: right; }
+.food-log-del { color: var(--muted); cursor: pointer; font-size: 14px; padding: 4px; margin-left: 4px; }
+.food-log-del:hover { color: var(--red); }
+.quick-food-tag {
+  font-size: 11px; padding: 4px 10px; border-radius: 20px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text2); cursor: pointer;
+}
+.quick-food-tag:hover { background: var(--card2); color: var(--text); }
+.search-result-item {
+  display: flex; align-items: center; gap: 10px; padding: 11px 14px;
+  border-bottom: 1px solid var(--border); cursor: pointer;
+}
+.search-result-item:hover { background: var(--bg3); }
+.search-result-item:last-child { border-bottom: none; }
+.glass-btn {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; cursor: pointer; transition: all 0.15s;
+  border: 1px solid var(--border);
+}
+.glass-btn.filled { background: rgba(90,200,250,0.15); border-color: rgba(90,200,250,0.3); }
+.glass-btn:not(.filled) { background: var(--bg3); color: var(--muted); font-size: 12px; }
+</style>
+
+<script>
+// ─── SUPABASE CONFIG ──────────────────────────
+const SUPABASE_URL = 'https://rvuhgzvppdbmafuhgnoo.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2dWhnenZwcGRibWFmdWhnbm9vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNTMxODUsImV4cCI6MjA5MDcyOTE4NX0.d6FhwWeRspotAXmE99taTzzwCWAxBmbevIu3yJ9f-sI';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// CLIENT_ID comes from URL ?client=simon-aynajian (fallback: 'demo')
+const CLIENT_ID = new URLSearchParams(window.location.search).get('client') || 'demo';
+
+// Default config — gets overwritten by Supabase data
+let CLIENT_CONFIG = {
+  name: 'Client',
+  initials: 'CC',
+  goal_description: '',
+  age: '',
+  gender: '',
+  target_weight_kg: 65,
+  calories_goal: 1900,
+  water_goal_ml: 2500,
+  steps_goal: 10000,
+  sleep_goal_h: 8,
+  coach_name: 'Rony Kawkab',
+  coach_message: 'Stay consistent and trust the process. Every healthy choice counts!'
+};
+
+// ─── DATE HELPERS ─────────────────────────────
+function todayISO() {
+  return new Date().toISOString().split('T')[0];
+}
+function formatGreetingDate(d) {
+  return d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+}
+function formatNutritionDate(d) {
+  return d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+}
+function greetingWord() {
+  const h = new Date().getHours();
+  if (h < 12) return 'morning';
+  if (h < 17) return 'afternoon';
+  return 'evening';
+}
+
+// ─── SUPABASE LOADERS ─────────────────────────
+async function loadClientConfig() {
+  const { data, error } = await supabase
+    .from('clients')
+    .select('config')
+    .eq('id', CLIENT_ID)
+    .single();
+  if (data && data.config) {
+    CLIENT_CONFIG = { ...CLIENT_CONFIG, ...data.config };
+  }
+}
+
+async function loadTodayFoodLogs() {
+  const { data } = await supabase
+    .from('food_logs')
+    .select('*')
+    .eq('client_id', CLIENT_ID)
+    .eq('date', todayISO())
+    .order('logged_at', { ascending: true });
+  if (data) {
+    data.forEach(row => addFoodItemToDOM(row.meal, row.food_name, row.grams, row.calories, row.protein, row.carbs, row.fat, row.id));
+    recalcTotals();
+  }
+}
+
+async function loadTodayWater() {
+  const { data } = await supabase
+    .from('water_logs')
+    .select('water_ml')
+    .eq('client_id', CLIENT_ID)
+    .eq('date', todayISO())
+    .single();
+  if (data) {
+    waterMl = data.water_ml;
+    updateWaterUI();
+    updateGlassesUI();
+  }
+}
+
+// ─── SUPABASE SAVERS ──────────────────────────
+async function saveFoodLog(meal, name, g, cal, p, c, f) {
+  const { data } = await supabase
+    .from('food_logs')
+    .insert({ client_id: CLIENT_ID, date: todayISO(), meal, food_name: name, grams: g, calories: cal, protein: p, carbs: c, fat: f })
+    .select('id')
+    .single();
+  return data ? data.id : null;
+}
+
+async function deleteFoodLog(logId) {
+  await supabase.from('food_logs').delete().eq('id', logId);
+}
+
+async function saveWater() {
+  await supabase
+    .from('water_logs')
+    .upsert({ client_id: CLIENT_ID, date: todayISO(), water_ml: waterMl, updated_at: new Date().toISOString() }, { onConflict: 'client_id,date' });
+}
+
+// ─── TAB SWITCHING ────────────────────────────
+function switchTab(name, el) {
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.getElementById('scroll-area').scrollTop = 0;
+}
+
+// ─── FOOD DATABASE (local demo subset) ────────
+const FOOD_DB = [
+  { name:'Chicken Breast, raw', brand:'USDA', cal:165, p:31, c:0, f:4 },
+  { name:'Chicken Breast, grilled', brand:'USDA', cal:165, p:31, c:0, f:4 },
+  { name:'Salmon, Atlantic (baked)', brand:'USDA', cal:208, p:20, c:0, f:13 },
+  { name:'Egg, whole, boiled', brand:'USDA', cal:78, p:6, c:1, f:5 },
+  { name:'Greek Yogurt 0% Fat', brand:'Chobani', cal:59, p:10, c:4, f:0 },
+  { name:'Oats, rolled, dry', brand:'USDA', cal:379, p:13, c:68, f:6 },
+  { name:'Banana, medium', brand:'USDA', cal:89, p:1, c:23, f:0 },
+  { name:'Apple, medium', brand:'USDA', cal:95, p:0, c:25, f:0 },
+  { name:'Brown Rice, cooked (100g)', brand:'USDA', cal:130, p:3, c:28, f:1 },
+  { name:'White Rice, cooked (100g)', brand:'USDA', cal:130, p:2, c:28, f:0 },
+  { name:'Olive Oil (1 tbsp)', brand:'USDA', cal:119, p:0, c:0, f:14 },
+  { name:'Almonds (28g / 1 oz)', brand:'USDA', cal:164, p:6, c:6, f:14 },
+  { name:'Sweet Potato (medium)', brand:'USDA', cal:103, p:2, c:24, f:0 },
+  { name:'Broccoli, cooked (100g)', brand:'USDA', cal:35, p:2, c:7, f:0 },
+  { name:'Avocado (half)', brand:'USDA', cal:160, p:2, c:9, f:15 },
+  { name:'Tuna, canned in water', brand:'USDA', cal:116, p:26, c:0, f:1 },
+  { name:'Cottage Cheese 2%', brand:'USDA', cal:90, p:12, c:4, f:3 },
+  { name:'Whey Protein Powder', brand:'Generic', cal:120, p:25, c:3, f:1 },
+  { name:'Whole Wheat Bread (1 slice)', brand:'Generic', cal:80, p:4, c:15, f:1 },
+  { name:'Milk, 2% (240ml)', brand:'USDA', cal:122, p:8, c:12, f:5 },
+  { name:'Pasta, cooked (100g)', brand:'USDA', cal:158, p:6, c:31, f:1 },
+  { name:'Lentils, cooked (100g)', brand:'USDA', cal:116, p:9, c:20, f:0 },
+  { name:'Spinach, raw (100g)', brand:'USDA', cal:23, p:3, c:4, f:0 },
+  { name:'Cheddar Cheese (28g)', brand:'USDA', cal:113, p:7, c:0, f:9 },
+  { name:'Orange juice (240ml)', brand:'USDA', cal:111, p:2, c:26, f:0 },
+  { name:'Coffee, black (240ml)', brand:'USDA', cal:5, p:0, c:1, f:0 },
+  { name:'Hummus (2 tbsp)', brand:'USDA', cal:70, p:2, c:6, f:5 },
+  { name:'Dark Chocolate 70% (28g)', brand:'Lindt', cal:170, p:2, c:13, f:12 },
+  { name:'Beef, ground 85% lean (100g)', brand:'USDA', cal:215, p:26, c:0, f:13 },
+  { name:'Protein Bar', brand:'Quest', cal:200, p:21, c:24, f:8 },
+];
+
+let currentServingSize = 100;
+let pendingFood = null;
+let currentMeal = 'Dinner';
+let waterMl = 1800;
+
+// ─── SEARCH ────────────────────────────────────
+function openFoodSearch() {
+  document.getElementById('food-search-panel').style.display = 'block';
+  setTimeout(() => document.getElementById('food-search-input').focus(), 100);
+}
+
+function closeFoodSearch() {
+  document.getElementById('food-search-panel').style.display = 'none';
+  document.getElementById('food-search-input').value = '';
+  document.getElementById('search-results').innerHTML = `<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">Start typing to search 2.8M+ foods…<br><span style="font-size:10px;font-family:'DM Mono',monospace;color:#333">Powered by USDA FoodData Central + Open Food Facts</span></div>`;
+}
+
+function searchFood(query) {
+  const q = query.toLowerCase().trim();
+  const results = document.getElementById('search-results');
+  if (q.length < 2) {
+    results.innerHTML = `<div style="padding:14px;text-align:center;color:var(--muted);font-size:12px">Keep typing…</div>`;
+    return;
+  }
+  const matches = FOOD_DB.filter(f => f.name.toLowerCase().includes(q) || f.brand.toLowerCase().includes(q)).slice(0, 8);
+  if (matches.length === 0) {
+    results.innerHTML = `<div style="padding:14px;text-align:center;color:var(--muted);font-size:12px">No results — try a different term</div>`;
+    return;
+  }
+  results.innerHTML = matches.map(f => `
+    <div class="search-result-item" onclick='selectFood(${JSON.stringify(f)})'>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${f.name}</div>
+        <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">${f.brand} · ${f.cal} kcal · P${f.p}g C${f.c}g F${f.f}g</div>
+      </div>
+      <div style="font-size:12px;color:var(--green);font-weight:700">+</div>
+    </div>
+  `).join('');
+}
+
+function selectFood(food) {
+  pendingFood = food;
+  currentMeal = document.getElementById('meal-selector').value;
+  currentServingSize = 100;
+  document.getElementById('fd-name').textContent = food.name;
+  document.getElementById('fd-brand').textContent = food.brand + ' · per 100g';
+  document.getElementById('fd-cal').textContent = food.cal;
+  document.getElementById('fd-prot').textContent = food.p;
+  document.getElementById('fd-carb').textContent = food.c;
+  document.getElementById('fd-fat').textContent = food.f;
+  document.getElementById('fd-serving').textContent = 100;
+  const modal = document.getElementById('food-detail-modal');
+  modal.style.display = 'flex';
+}
+
+function closeFoodDetail() {
+  document.getElementById('food-detail-modal').style.display = 'none';
+}
+
+function changeServing(delta) {
+  currentServingSize = Math.max(5, currentServingSize + delta * 10);
+  document.getElementById('fd-serving').textContent = currentServingSize;
+  const ratio = currentServingSize / 100;
+  document.getElementById('fd-cal').textContent = Math.round(pendingFood.cal * ratio);
+  document.getElementById('fd-prot').textContent = Math.round(pendingFood.p * ratio);
+  document.getElementById('fd-carb').textContent = Math.round(pendingFood.c * ratio);
+  document.getElementById('fd-fat').textContent = Math.round(pendingFood.f * ratio);
+}
+
+function confirmAddFood() {
+  if (!pendingFood) return;
+  const ratio = currentServingSize / 100;
+  const cal = Math.round(pendingFood.cal * ratio);
+  const p = Math.round(pendingFood.p * ratio);
+  const c = Math.round(pendingFood.c * ratio);
+  const f = Math.round(pendingFood.f * ratio);
+  addFoodItem(currentMeal, pendingFood.name, currentServingSize, cal, p, c, f);
+  closeFoodDetail();
+  closeFoodSearch();
+}
+
+function quickAdd(name, cal, c, p, f) {
+  pendingFood = { name, cal, c, p, f, brand:'Recent' };
+  currentMeal = document.getElementById('meal-selector').value;
+  currentServingSize = 100;
+  selectFood(pendingFood);
+}
+
+function addToMeal(meal) {
+  document.getElementById('meal-selector').value = meal;
+  openFoodSearch();
+}
+
+// DOM-only (used when loading from Supabase on startup)
+function addFoodItemToDOM(meal, name, g, cal, p, c, f, logId) {
+  const mealId = meal.toLowerCase() + '-items';
+  const container = document.getElementById(mealId);
+  if (!container) return;
+  const item = document.createElement('div');
+  item.className = 'food-log-item';
+  if (logId) item.dataset.logId = logId;
+  item.innerHTML = `
+    <div class="food-log-info">
+      <div class="food-log-name">${name}</div>
+      <div class="food-log-meta">${g}g · ${cal} kcal · P ${p}g · C ${c}g · F ${f}g</div>
+    </div>
+    <div class="food-log-kcal" style="color:var(--text2)">${cal}</div>
+    <div class="food-log-del" onclick="removeFood(this)">✕</div>
+  `;
+  const items = container.querySelectorAll('.food-log-item');
+  items.forEach(i => i.style.borderBottom = '1px solid var(--border)');
+  item.style.borderBottom = 'none';
+  container.appendChild(item);
+}
+
+// Async: saves to Supabase then adds to DOM
+async function addFoodItem(meal, name, g, cal, p, c, f) {
+  const logId = await saveFoodLog(meal, name, g, cal, p, c, f);
+  addFoodItemToDOM(meal, name, g, cal, p, c, f, logId);
+  recalcTotals();
+}
+
+async function removeFood(btn) {
+  const item = btn.closest('.food-log-item');
+  const logId = item.dataset.logId;
+  item.remove();
+  recalcTotals();
+  if (logId) await deleteFoodLog(logId);
+}
+
+function recalcTotals() {
+  let total = 0;
+  const meals = ['breakfast','lunch','dinner','snacks'];
+  meals.forEach(meal => {
+    let mealCal = 0;
+    document.querySelectorAll('#' + meal + '-items .food-log-kcal').forEach(el => {
+      mealCal += parseInt(el.textContent) || 0;
+    });
+    const calEl = document.getElementById(meal + '-cal');
+    if (calEl) calEl.textContent = mealCal.toLocaleString() + ' kcal';
+    total += mealCal;
+  });
+  document.getElementById('nl-food').textContent = total.toLocaleString();
+  const goal = CLIENT_CONFIG.calories_goal;
+  const exercise = 0;
+  const remaining = Math.max(0, goal - total + exercise);
+  document.getElementById('nl-remaining').textContent = remaining.toLocaleString();
+}
+
+// ─── BARCODE ─────────────────────────────────
+function showBarcode() {
+  document.getElementById('barcode-modal').style.display = 'flex';
+}
+
+function closeBarcode() {
+  document.getElementById('barcode-modal').style.display = 'none';
+}
+
+function simulateScan() {
+  closeBarcode();
+  const scanned = { name:'Chobani Greek Yogurt 0% Vanilla', brand:'Chobani · Barcode #0818290004', cal:90, p:12, c:11, f:0 };
+  pendingFood = scanned;
+  currentMeal = document.getElementById('meal-selector').value || 'Snacks';
+  currentServingSize = 150;
+  selectFood(scanned);
+  document.getElementById('fd-brand').textContent = scanned.brand;
+}
+
+// ─── WATER ─────────────────────────────────
+async function addWater(ml) {
+  waterMl = Math.min(4000, waterMl + ml);
+  updateWaterUI();
+  updateGlassesUI();
+  await saveWater();
+}
+
+async function toggleGlass(el) {
+  el.classList.toggle('filled');
+  if (el.classList.contains('filled')) {
+    el.textContent = '💧';
+    waterMl = Math.min(4000, waterMl + 250);
+  } else {
+    el.textContent = '○';
+    waterMl = Math.max(0, waterMl - 250);
+  }
+  updateWaterUI();
+  await saveWater();
+}
+
+function updateGlassesUI() {
+  const glasses = document.querySelectorAll('.glass-btn');
+  const filled = Math.round(waterMl / 250);
+  glasses.forEach((g, i) => {
+    if (i < filled) {
+      g.classList.add('filled');
+      g.textContent = '💧';
+    } else {
+      g.classList.remove('filled');
+      g.textContent = '○';
+    }
+  });
+}
+
+function updateWaterUI() {
+  const goal = CLIENT_CONFIG.water_goal_ml;
+  const pct = Math.min(100, Math.round((waterMl / goal) * 100));
+  const liters = (waterMl / 1000).toFixed(1);
+  const goalL = (goal / 1000).toFixed(1);
+  const bar = document.getElementById('water-prog-bar');
+  if (bar) bar.style.width = pct + '%';
+  const disp = document.getElementById('water-display');
+  if (disp) disp.textContent = liters + 'L / ' + goalL + 'L';
+}
+
+// ─── INIT ─────────────────────────────────────
+async function init() {
+  await loadClientConfig();
+
+  // Populate greeting
+  const now = new Date();
+  const el = id => document.getElementById(id);
+  el('greeting-name').textContent = 'Good ' + greetingWord() + ', ' + CLIENT_CONFIG.name.split(' ')[0] + ' 👋';
+  el('greeting-date').textContent = formatGreetingDate(now);
+  el('nutrition-date').textContent = formatNutritionDate(now);
+
+  // Coach badge & message
+  el('coach-badge-text').innerHTML = 'Coach <strong>' + CLIENT_CONFIG.coach_name + '</strong> is watching your progress';
+  el('coach-avatar').textContent = CLIENT_CONFIG.coach_name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  el('coach-msg-name').textContent = 'Coach ' + CLIENT_CONFIG.coach_name.split(' ')[0];
+  el('coach-msg-text').textContent = CLIENT_CONFIG.coach_message;
+
+  // Profile
+  el('profile-name').textContent = CLIENT_CONFIG.name;
+  el('profile-initials').textContent = CLIENT_CONFIG.initials || CLIENT_CONFIG.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const metaParts = [];
+  if (CLIENT_CONFIG.goal_description) metaParts.push('Goal: ' + CLIENT_CONFIG.goal_description);
+  if (CLIENT_CONFIG.age) metaParts.push(CLIENT_CONFIG.age);
+  if (CLIENT_CONFIG.gender) metaParts.push(CLIENT_CONFIG.gender);
+  el('profile-meta').textContent = metaParts.join(' · ');
+
+  // Goals section
+  el('goal-weight').textContent = CLIENT_CONFIG.target_weight_kg + ' kg';
+  el('goal-calories').textContent = CLIENT_CONFIG.calories_goal.toLocaleString() + ' kcal';
+  el('goal-water').textContent = (CLIENT_CONFIG.water_goal_ml / 1000).toFixed(1) + ' L';
+  el('goal-steps').textContent = CLIENT_CONFIG.steps_goal.toLocaleString();
+  const sleepH = Math.floor(CLIENT_CONFIG.sleep_goal_h);
+  const sleepM = Math.round((CLIENT_CONFIG.sleep_goal_h - sleepH) * 60);
+  el('goal-sleep').textContent = sleepH + 'h ' + String(sleepM).padStart(2,'0') + 'm';
+
+  // Load today's data from Supabase
+  await Promise.all([loadTodayFoodLogs(), loadTodayWater()]);
+
+  // Hide loader
+  const loader = document.getElementById('app-loader');
+  if (loader) loader.style.display = 'none';
+}
+
+function id(x) { return document.getElementById(x); }
+
+window.addEventListener('DOMContentLoaded', init);
+
+// ─── PHOTO UPLOAD ────────────────────────────
+function handlePhotoUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = document.getElementById('profile-photo');
+    const initials = document.getElementById('profile-initials');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    initials.style.display = 'none';
+    document.getElementById('photo-hint').textContent = 'Tap to change photo';
+    // Also update coach dashboard avatar (if visible)
+    const hint = document.getElementById('photo-hint');
+    hint.textContent = '✓ Photo updated!';
+    setTimeout(() => { hint.textContent = 'Tap photo to change'; }, 2000);
+  };
+  reader.readAsDataURL(file);
+}
+</script>
+</body>
+</html>
