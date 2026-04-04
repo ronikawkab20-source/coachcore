@@ -1496,7 +1496,7 @@ body {
 // ─── SUPABASE CONFIG ──────────────────────────
 const SUPABASE_URL = 'https://rvuhgzvppdbmafuhgnoo.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2dWhnenZwcGRibWFmdWhnbm9vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNTMxODUsImV4cCI6MjA5MDcyOTE4NX0.d6FhwWeRspotAXmE99taTzzwCWAxBmbevIu3yJ9f-sI';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // CLIENT_ID comes from URL ?client=simon-aynajian (fallback: 'demo')
 const CLIENT_ID = new URLSearchParams(window.location.search).get('client') || 'demo';
@@ -1536,7 +1536,7 @@ function greetingWord() {
 
 // ─── SUPABASE LOADERS ─────────────────────────
 async function loadClientConfig() {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('clients')
     .select('config')
     .eq('id', CLIENT_ID)
@@ -1547,7 +1547,7 @@ async function loadClientConfig() {
 }
 
 async function loadTodayFoodLogs() {
-  const { data } = await supabase
+  const { data } = await db
     .from('food_logs')
     .select('*')
     .eq('client_id', CLIENT_ID)
@@ -1560,7 +1560,7 @@ async function loadTodayFoodLogs() {
 }
 
 async function loadTodayWater() {
-  const { data } = await supabase
+  const { data } = await db
     .from('water_logs')
     .select('water_ml')
     .eq('client_id', CLIENT_ID)
@@ -1575,7 +1575,7 @@ async function loadTodayWater() {
 
 // ─── SUPABASE SAVERS ──────────────────────────
 async function saveFoodLog(meal, name, g, cal, p, c, f) {
-  const { data } = await supabase
+  const { data } = await db
     .from('food_logs')
     .insert({ client_id: CLIENT_ID, date: todayISO(), meal, food_name: name, grams: g, calories: cal, protein: p, carbs: c, fat: f })
     .select('id')
@@ -1588,7 +1588,7 @@ async function deleteFoodLog(logId) {
 }
 
 async function saveWater() {
-  await supabase
+  await db
     .from('water_logs')
     .upsert({ client_id: CLIENT_ID, date: todayISO(), water_ml: waterMl, updated_at: new Date().toISOString() }, { onConflict: 'client_id,date' });
 }
