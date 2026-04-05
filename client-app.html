@@ -770,9 +770,12 @@ body {
 
       <!-- DAILY SUMMARY BAR -->
       <div style="padding:16px 20px 0">
-        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
           <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px">Food Diary</div>
-          <div style="font-size:12px;color:var(--text2);font-family:'DM Mono',monospace" id="nutrition-date">Tue, Mar 31</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="font-size:12px;color:var(--text2);font-family:'DM Mono',monospace" id="nutrition-date">Tue, Mar 31</div>
+            <button onclick="showPlan()" style="background:rgba(48,209,88,0.12);border:1px solid rgba(48,209,88,0.25);border-radius:10px;padding:5px 10px;font-size:11px;font-weight:700;color:var(--green);cursor:pointer;font-family:'Outfit',sans-serif;white-space:nowrap">📋 My Plan</button>
+          </div>
         </div>
       </div>
 
@@ -819,51 +822,43 @@ body {
         </div>
       </div>
 
-      <!-- SEARCH BAR -->
+      <!-- SEARCH BAR — always visible real input -->
       <div style="margin:14px 20px 0" class="anim d1">
-        <div style="background:var(--card);border:1px solid var(--border2);border-radius:14px;display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer" onclick="openFoodSearch()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#606070" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <div style="font-size:14px;color:var(--muted);flex:1">Search food or scan barcode…</div>
-          <div style="background:var(--bg3);border-radius:8px;padding:5px 8px;display:flex;align-items:center;gap:4px;cursor:pointer" onclick="event.stopPropagation();showBarcode()">
+        <div style="background:var(--card);border:1px solid var(--border2);border-radius:14px;display:flex;align-items:center;gap:10px;padding:10px 14px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input id="food-search-input" type="search" placeholder="Search food to log…" autocomplete="off"
+            style="flex:1;background:transparent;border:none;outline:none;font-size:14px;color:var(--text);font-family:'Outfit',sans-serif;-webkit-appearance:none"
+            oninput="searchFood(this.value)" onfocus="openFoodSearch()" />
+          <span id="search-clear-btn" style="font-size:16px;cursor:pointer;color:var(--muted);display:none" onclick="closeFoodSearch()">✕</span>
+          <div style="background:var(--bg3);border-radius:8px;padding:5px 8px;display:flex;align-items:center;gap:4px;cursor:pointer;flex-shrink:0" onclick="showBarcode()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><rect x="1" y="4" width="4" height="16"/><rect x="7" y="4" width="2" height="16"/><rect x="11" y="4" width="4" height="16"/><rect x="17" y="4" width="2" height="16"/><rect x="21" y="4" width="2" height="16"/></svg>
             <span style="font-size:11px;color:var(--blue);font-weight:600">Scan</span>
           </div>
         </div>
-      </div>
-
-      <!-- SEARCH PANEL (hidden by default) -->
-      <div id="food-search-panel" style="display:none;margin:10px 20px 0;background:var(--card);border:1px solid var(--border2);border-radius:16px;overflow:hidden">
-        <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input id="food-search-input" type="text" placeholder="e.g. Greek yogurt, banana, chicken…"
-            style="flex:1;background:transparent;border:none;outline:none;font-size:14px;color:var(--text);font-family:'Outfit',sans-serif"
-            oninput="searchFood(this.value)">
-          <span style="font-size:18px;cursor:pointer;color:var(--muted)" onclick="closeFoodSearch()">✕</span>
-        </div>
-        <!-- Quick add buttons -->
-        <div style="padding:10px 14px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
-          <span style="font-size:11px;color:var(--muted)">Recent:</span>
-          <span class="quick-food-tag" onclick="quickAdd('Greek Yogurt 0% Fat',100,17,6,0)">Greek Yogurt</span>
-          <span class="quick-food-tag" onclick="quickAdd('Banana',89,23,1,0)">Banana</span>
-          <span class="quick-food-tag" onclick="quickAdd('Chicken Breast',165,0,31,4)">Chicken</span>
-          <span class="quick-food-tag" onclick="quickAdd('Brown Rice (100g)',130,28,3,1)">Brown Rice</span>
-          <span class="quick-food-tag" onclick="quickAdd('Olive Oil (1 tbsp)',119,0,0,14)">Olive Oil</span>
-        </div>
-        <div id="search-results" style="max-height:200px;overflow-y:auto">
-          <div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">
-            Start typing to search 2.8M+ foods…<br>
-            <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--border2)">Powered by USDA FoodData Central + Open Food Facts</span>
+        <!-- Results + meal selector — shown when searching -->
+        <div id="food-search-panel" style="display:none;background:var(--card);border:1px solid var(--border2);border-top:none;border-radius:0 0 14px 14px;overflow:hidden;margin-top:-2px">
+          <!-- Quick tags -->
+          <div style="padding:10px 14px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+            <span style="font-size:11px;color:var(--muted);align-self:center">Quick:</span>
+            <span class="quick-food-tag" onclick="quickAdd('Greek Yogurt 0% Fat',59,10,4,0)">Greek Yogurt</span>
+            <span class="quick-food-tag" onclick="quickAdd('Banana',89,1,23,0)">Banana</span>
+            <span class="quick-food-tag" onclick="quickAdd('Chicken Breast',165,31,0,4)">Chicken</span>
+            <span class="quick-food-tag" onclick="quickAdd('Brown Rice (100g)',130,3,28,1)">Brown Rice</span>
+            <span class="quick-food-tag" onclick="quickAdd('Olive Oil (1 tbsp)',119,0,0,14)">Olive Oil</span>
           </div>
-        </div>
-        <!-- Meal selector -->
-        <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:6px;align-items:center">
-          <span style="font-size:11px;color:var(--muted)">Add to:</span>
-          <select id="meal-selector" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--text);outline:none;font-family:'Outfit',sans-serif">
-            <option>Breakfast</option>
-            <option>Lunch</option>
-            <option selected>Dinner</option>
-            <option>Snacks</option>
-          </select>
+          <div id="search-results" style="max-height:220px;overflow-y:auto">
+            <div style="padding:14px;text-align:center;color:var(--muted);font-size:13px">Type to search foods…</div>
+          </div>
+          <!-- Meal selector -->
+          <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center">
+            <span style="font-size:12px;color:var(--text2);font-weight:600">Add to:</span>
+            <select id="meal-selector" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--text);outline:none;font-family:'Outfit',sans-serif;flex:1">
+              <option>Breakfast</option>
+              <option>Lunch</option>
+              <option selected>Dinner</option>
+              <option>Snacks</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -879,8 +874,8 @@ body {
               <div style="font-size:18px;color:var(--green);cursor:pointer;line-height:1" onclick="addToMeal('Breakfast')">+</div>
             </div>
           </div>
-          <div id="breakfast-items" style="background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;min-height:40px">
-            <div class="empty-meal-hint" style="padding:14px;text-align:center;color:var(--muted);font-size:12px">No items yet — tap + to add</div>
+          <div id="breakfast-items" style="background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;min-height:40px;cursor:pointer" onclick="if(!this.querySelector('.food-log-item'))addToMeal('Breakfast')">
+            <div class="empty-meal-hint" style="padding:14px;text-align:center;color:var(--muted);font-size:12px">Tap to log breakfast 🌅</div>
           </div>
         </div>
 
@@ -893,8 +888,8 @@ body {
               <div style="font-size:18px;color:var(--green);cursor:pointer;line-height:1" onclick="addToMeal('Lunch')">+</div>
             </div>
           </div>
-          <div id="lunch-items" style="background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;min-height:40px">
-            <div class="empty-meal-hint" style="padding:14px;text-align:center;color:var(--muted);font-size:12px">No items yet — tap + to add</div>
+          <div id="lunch-items" style="background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;min-height:40px;cursor:pointer" onclick="if(!this.querySelector('.food-log-item'))addToMeal('Lunch')">
+            <div class="empty-meal-hint" style="padding:14px;text-align:center;color:var(--muted);font-size:12px">Tap to log lunch ☀️</div>
           </div>
         </div>
 
@@ -907,8 +902,8 @@ body {
               <div style="font-size:18px;color:var(--green);cursor:pointer;line-height:1" onclick="addToMeal('Dinner')">+</div>
             </div>
           </div>
-          <div id="dinner-items" style="background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;min-height:40px">
-            <div class="empty-meal-hint" style="padding:14px;text-align:center;color:var(--muted);font-size:12px">No items yet — tap + to add</div>
+          <div id="dinner-items" style="background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;min-height:40px;cursor:pointer" onclick="if(!this.querySelector('.food-log-item'))addToMeal('Dinner')">
+            <div class="empty-meal-hint" style="padding:14px;text-align:center;color:var(--muted);font-size:12px">Tap to log dinner 🌙</div>
           </div>
         </div>
 
@@ -921,8 +916,8 @@ body {
               <div style="font-size:18px;color:var(--green);cursor:pointer;line-height:1" onclick="addToMeal('Snacks')">+</div>
             </div>
           </div>
-          <div id="snacks-items" style="background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;min-height:40px">
-            <div class="empty-meal-hint" style="padding:14px;text-align:center;color:var(--muted);font-size:12px">No items yet — tap + to add</div>
+          <div id="snacks-items" style="background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;min-height:40px;cursor:pointer" onclick="if(!this.querySelector('.food-log-item'))addToMeal('Snacks')">
+            <div class="empty-meal-hint" style="padding:14px;text-align:center;color:var(--muted);font-size:12px">Tap to log snacks 🍎</div>
           </div>
         </div>
 
@@ -1468,13 +1463,17 @@ let waterMl = 1800;
 // ─── SEARCH ────────────────────────────────────
 function openFoodSearch() {
   document.getElementById('food-search-panel').style.display = 'block';
-  setTimeout(() => document.getElementById('food-search-input').focus(), 100);
+  const clearBtn = document.getElementById('search-clear-btn');
+  if (clearBtn) clearBtn.style.display = 'inline';
 }
 
 function closeFoodSearch() {
   document.getElementById('food-search-panel').style.display = 'none';
   document.getElementById('food-search-input').value = '';
-  document.getElementById('search-results').innerHTML = `<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">Start typing to search 2.8M+ foods…<br><span style="font-size:10px;font-family:'DM Mono',monospace;color:#333">Powered by USDA FoodData Central + Open Food Facts</span></div>`;
+  document.getElementById('search-results').innerHTML = '<div style="padding:14px;text-align:center;color:var(--muted);font-size:13px">Type to search foods…</div>';
+  const clearBtn = document.getElementById('search-clear-btn');
+  if (clearBtn) clearBtn.style.display = 'none';
+  document.getElementById('food-search-input').blur();
 }
 
 function searchFood(query) {
@@ -1599,7 +1598,10 @@ async function removeFood(btn) {
   item.remove();
   // Restore empty hint if no items left
   if (container && container.querySelectorAll('.food-log-item').length === 0) {
-    container.innerHTML = '<div class="empty-meal-hint" style="padding:14px;text-align:center;color:var(--muted);font-size:12px">No items yet — tap + to add</div>';
+    const mealEmojis = {breakfast:'🌅',lunch:'☀️',dinner:'🌙',snacks:'🍎'};
+    const mealName = container.id.replace('-items','');
+    const emoji = mealEmojis[mealName] || '';
+    container.innerHTML = `<div class="empty-meal-hint" style="padding:14px;text-align:center;color:var(--muted);font-size:12px">Tap to log ${mealName} ${emoji}</div>`;
   }
   recalcTotals();
   if (logId) await deleteFoodLog(logId);
@@ -1751,6 +1753,80 @@ function id(x) { return document.getElementById(x); }
 
 window.addEventListener('DOMContentLoaded', init);
 
+// ─── COACH PLAN MODAL ─────────────────────────
+function showPlan() {
+  const modal = document.getElementById('plan-modal');
+  modal.style.display = 'flex';
+  renderPlan();
+}
+
+function hidePlan() {
+  document.getElementById('plan-modal').style.display = 'none';
+}
+
+function renderPlan() {
+  const container = document.getElementById('plan-meals-container');
+  const plan = CLIENT_CONFIG.plan;
+
+  // Update coach name and total calories
+  const coachEl = document.getElementById('plan-coach-name');
+  if (coachEl) coachEl.textContent = CLIENT_CONFIG.coach_name || 'Rony Kawkab';
+  const totalCalEl = document.getElementById('plan-total-cal');
+  if (totalCalEl) totalCalEl.textContent = (CLIENT_CONFIG.calories_goal || 0).toLocaleString() + ' kcal';
+
+  // Coach notes
+  if (CLIENT_CONFIG.plan_notes) {
+    const notesWrap = document.getElementById('plan-notes-wrap');
+    const notesText = document.getElementById('plan-notes-text');
+    if (notesWrap) notesWrap.style.display = 'block';
+    if (notesText) notesText.textContent = CLIENT_CONFIG.plan_notes;
+  }
+
+  if (!plan || plan.length === 0) {
+    container.innerHTML = '<div style="padding:40px 20px;text-align:center"><div style="font-size:40px;margin-bottom:12px">🥗</div><div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">No plan uploaded yet</div><div style="font-size:13px;color:var(--text2)">Your coach will add your nutrition plan here soon.</div></div>';
+    return;
+  }
+
+  const mealColors = { Breakfast:'#ff9f0a', Lunch:'#30d158', Dinner:'#0a84ff', Snacks:'#bf5af2' };
+
+  container.innerHTML = plan.map(meal => {
+    const mealCal = meal.items.reduce((s, i) => s + (i.cal || 0), 0);
+    const mealP = meal.items.reduce((s, i) => s + (i.p || 0), 0);
+    const mealC = meal.items.reduce((s, i) => s + (i.c || 0), 0);
+    const mealF = meal.items.reduce((s, i) => s + (i.f || 0), 0);
+    const color = mealColors[meal.meal] || 'var(--green)';
+
+    const itemsHTML = meal.items.map(item => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">${item.name}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px">${item.grams}g · P ${item.p}g · C ${item.c}g · F ${item.f}g</div>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:${color};min-width:48px;text-align:right">${item.cal} kcal</div>
+      </div>
+    `).join('');
+
+    return `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-top:12px">
+        <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:18px">${meal.icon || '🍽️'}</span>
+            <div>
+              <div style="font-size:14px;font-weight:700">${meal.meal}</div>
+              <div style="font-size:11px;color:var(--muted)">${meal.time || ''}</div>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:15px;font-weight:800;color:${color}">${mealCal} kcal</div>
+            <div style="font-size:10px;color:var(--muted)">P${mealP} C${mealC} F${mealF}</div>
+          </div>
+        </div>
+        <div style="padding:0 14px 4px">${itemsHTML}</div>
+      </div>
+    `;
+  }).join('');
+}
+
 // ─── PHOTO UPLOAD ────────────────────────────
 function handlePhotoUpload(input) {
   const file = input.files[0];
@@ -1771,5 +1847,38 @@ function handlePhotoUpload(input) {
   reader.readAsDataURL(file);
 }
 </script>
+
+<!-- MY PLAN MODAL -->
+<div id="plan-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1100;align-items:flex-end;justify-content:center">
+  <div style="background:var(--bg);border-radius:24px 24px 0 0;width:100%;max-width:393px;max-height:88vh;overflow-y:auto;padding-bottom:40px">
+    <!-- Handle -->
+    <div style="padding:12px 20px 0;position:sticky;top:0;background:var(--bg);z-index:2">
+      <div style="width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 14px"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div>
+          <div style="font-size:20px;font-weight:800;letter-spacing:-0.4px">📋 My Nutrition Plan</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">Prescribed by Coach <span id="plan-coach-name">Rony Kawkab</span></div>
+        </div>
+        <button onclick="hidePlan()" style="background:var(--bg3);border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+      <!-- Total calories target -->
+      <div style="background:rgba(48,209,88,0.08);border:1px solid rgba(48,209,88,0.2);border-radius:12px;padding:10px 14px;margin:10px 0;display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:12px;color:var(--text2)">Daily Calorie Target</div>
+        <div style="font-size:18px;font-weight:800;color:var(--green)" id="plan-total-cal">—</div>
+      </div>
+      <div style="height:1px;background:var(--border);margin-bottom:0"></div>
+    </div>
+    <!-- Meal cards rendered by JS -->
+    <div id="plan-meals-container" style="padding:0 16px">
+      <div style="padding:30px;text-align:center;color:var(--muted);font-size:13px">Loading plan…</div>
+    </div>
+    <!-- Notes from coach -->
+    <div id="plan-notes-wrap" style="display:none;margin:8px 16px 0;background:rgba(10,132,255,0.06);border:1px solid rgba(10,132,255,0.15);border-radius:14px;padding:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Coach Notes</div>
+      <div id="plan-notes-text" style="font-size:13px;color:var(--text2);line-height:1.6"></div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
