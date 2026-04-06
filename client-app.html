@@ -1421,39 +1421,9 @@ function switchTab(name, el) {
   document.getElementById('scroll-area').scrollTop = 0;
 }
 
-// ─── FOOD DATABASE (local demo subset) ────────
-const FOOD_DB = [
-  { name:'Chicken Breast, raw', brand:'USDA', cal:165, p:31, c:0, f:4 },
-  { name:'Chicken Breast, grilled', brand:'USDA', cal:165, p:31, c:0, f:4 },
-  { name:'Salmon, Atlantic (baked)', brand:'USDA', cal:208, p:20, c:0, f:13 },
-  { name:'Egg, whole, boiled', brand:'USDA', cal:78, p:6, c:1, f:5 },
-  { name:'Greek Yogurt 0% Fat', brand:'Chobani', cal:59, p:10, c:4, f:0 },
-  { name:'Oats, rolled, dry', brand:'USDA', cal:379, p:13, c:68, f:6 },
-  { name:'Banana, medium', brand:'USDA', cal:89, p:1, c:23, f:0 },
-  { name:'Apple, medium', brand:'USDA', cal:95, p:0, c:25, f:0 },
-  { name:'Brown Rice, cooked (100g)', brand:'USDA', cal:130, p:3, c:28, f:1 },
-  { name:'White Rice, cooked (100g)', brand:'USDA', cal:130, p:2, c:28, f:0 },
-  { name:'Olive Oil (1 tbsp)', brand:'USDA', cal:119, p:0, c:0, f:14 },
-  { name:'Almonds (28g / 1 oz)', brand:'USDA', cal:164, p:6, c:6, f:14 },
-  { name:'Sweet Potato (medium)', brand:'USDA', cal:103, p:2, c:24, f:0 },
-  { name:'Broccoli, cooked (100g)', brand:'USDA', cal:35, p:2, c:7, f:0 },
-  { name:'Avocado (half)', brand:'USDA', cal:160, p:2, c:9, f:15 },
-  { name:'Tuna, canned in water', brand:'USDA', cal:116, p:26, c:0, f:1 },
-  { name:'Cottage Cheese 2%', brand:'USDA', cal:90, p:12, c:4, f:3 },
-  { name:'Whey Protein Powder', brand:'Generic', cal:120, p:25, c:3, f:1 },
-  { name:'Whole Wheat Bread (1 slice)', brand:'Generic', cal:80, p:4, c:15, f:1 },
-  { name:'Milk, 2% (240ml)', brand:'USDA', cal:122, p:8, c:12, f:5 },
-  { name:'Pasta, cooked (100g)', brand:'USDA', cal:158, p:6, c:31, f:1 },
-  { name:'Lentils, cooked (100g)', brand:'USDA', cal:116, p:9, c:20, f:0 },
-  { name:'Spinach, raw (100g)', brand:'USDA', cal:23, p:3, c:4, f:0 },
-  { name:'Cheddar Cheese (28g)', brand:'USDA', cal:113, p:7, c:0, f:9 },
-  { name:'Orange juice (240ml)', brand:'USDA', cal:111, p:2, c:26, f:0 },
-  { name:'Coffee, black (240ml)', brand:'USDA', cal:5, p:0, c:1, f:0 },
-  { name:'Hummus (2 tbsp)', brand:'USDA', cal:70, p:2, c:6, f:5 },
-  { name:'Dark Chocolate 70% (28g)', brand:'Lindt', cal:170, p:2, c:13, f:12 },
-  { name:'Beef, ground 85% lean (100g)', brand:'USDA', cal:215, p:26, c:0, f:13 },
-  { name:'Protein Bar', brand:'Quest', cal:200, p:21, c:24, f:8 },
-];
+// ─── USDA FoodData Central API ────────
+const USDA_API_KEY = 'sGNmQeh7u3oattkeo3r3JjMN6gv4YNq4ph0Qpkcy';
+let _searchTimer = null;
 
 let currentServingSize = 100;
 let pendingFood = null;
@@ -1477,26 +1447,54 @@ function closeFoodSearch() {
 }
 
 function searchFood(query) {
-  const q = query.toLowerCase().trim();
+  const q = query.trim();
   const results = document.getElementById('search-results');
+  clearTimeout(_searchTimer);
   if (q.length < 2) {
     results.innerHTML = `<div style="padding:14px;text-align:center;color:var(--muted);font-size:12px">Keep typing…</div>`;
     return;
   }
-  const matches = FOOD_DB.filter(f => f.name.toLowerCase().includes(q) || f.brand.toLowerCase().includes(q)).slice(0, 8);
-  if (matches.length === 0) {
-    results.innerHTML = `<div style="padding:14px;text-align:center;color:var(--muted);font-size:12px">No results — try a different term</div>`;
-    return;
-  }
-  results.innerHTML = matches.map(f => `
-    <div class="search-result-item" onclick='selectFood(${JSON.stringify(f)})'>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600">${f.name}</div>
-        <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">${f.brand} · ${f.cal} kcal · P${f.p}g C${f.c}g F${f.f}g</div>
+  results.innerHTML = `<div style="padding:14px;text-align:center;color:var(--muted);font-size:12px">🔍 Searching…</div>`;
+  _searchTimer = setTimeout(() => _doUSDASearch(q), 400);
+}
+
+async function _doUSDASearch(q) {
+  const results = document.getElementById('search-results');
+  try {
+    const url = `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(q)}&pageSize=10&api_key=${USDA_API_KEY}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const foods = (data.foods || []).map(item => {
+      const getNutrient = (id, fallbackName) => {
+        const n = (item.foodNutrients || []).find(x => x.nutrientId === id || (x.nutrientName||'').toLowerCase().includes(fallbackName));
+        return n ? Math.round(n.value) : 0;
+      };
+      return {
+        name: item.description,
+        brand: item.brandOwner || item.dataType || 'USDA',
+        cal: getNutrient(1008, 'energy'),
+        p:   getNutrient(1003, 'protein'),
+        c:   getNutrient(1005, 'carbohydrate'),
+        f:   getNutrient(1004, 'total lipid')
+      };
+    }).filter(f => f.cal > 0);
+
+    if (foods.length === 0) {
+      results.innerHTML = `<div style="padding:14px;text-align:center;color:var(--muted);font-size:12px">No results — try a different term</div>`;
+      return;
+    }
+    results.innerHTML = foods.map(f => `
+      <div class="search-result-item" onclick='selectFood(${JSON.stringify(f)})'>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
+          <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">${f.brand} · ${f.cal} kcal · P${f.p}g C${f.c}g F${f.f}g</div>
+        </div>
+        <div style="font-size:12px;color:var(--green);font-weight:700;flex-shrink:0;margin-left:8px">+</div>
       </div>
-      <div style="font-size:12px;color:var(--green);font-weight:700">+</div>
-    </div>
-  `).join('');
+    `).join('');
+  } catch(e) {
+    results.innerHTML = `<div style="padding:14px;text-align:center;color:var(--muted);font-size:12px">⚠️ Search failed — check connection</div>`;
+  }
 }
 
 function selectFood(food) {
